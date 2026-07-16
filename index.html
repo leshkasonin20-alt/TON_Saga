@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>TON Saga - Match 3</title>
-    <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <style>
         :root {
             --bg-color: #060818;
@@ -71,10 +71,10 @@
         }
 
         /* =========================================
-           ЭКРАН ЗАГРУЗКИ (НОВЫЙ)
+           ЭКРАН ЗАГРУЗКИ
            ========================================= */
         #loading-screen {
-            z-index: 9999; /* Поверх всего */
+            z-index: 9999;
             background: var(--bg-color);
             background-image: radial-gradient(circle at center, #0a1128 0%, #030510 100%);
             justify-content: center;
@@ -377,14 +377,14 @@
         /* --- ЭКРАН 2: ИГРОВОЙ ПОЛЕ --- */
         #game-screen {
             justify-content: flex-start;
-            gap: 20px;
+            gap: 15px;
         }
         .game-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             width: 100%;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
         #board-container {
             width: 100%;
@@ -432,6 +432,53 @@
         
         .btn-back:active {
             background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* --- БУСТЕРЫ --- */
+        .booster-panel {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            width: 100%;
+            padding: 5px 0;
+        }
+        .booster-btn {
+            background: var(--panel-bg);
+            border: 2px solid rgba(0, 136, 204, 0.5);
+            border-radius: 12px;
+            width: 65px;
+            height: 65px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        .booster-btn.active {
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 15px var(--accent-gold);
+            transform: scale(1.1);
+            background: rgba(40, 30, 0, 0.8);
+        }
+        .booster-icon { font-size: 1.8rem; }
+        .booster-count {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: #e53935;
+            color: white;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            font-size: 0.75rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
 
         /* --- ЭКРАН 3, 4, 5: МАГАЗИН, КВЕСТЫ, ПРОФИЛЬ (ОБЩИЕ СТИЛИ ПРОКРУТКИ) --- */
@@ -702,7 +749,6 @@
 
 <div id="game-container">
 
-    <!-- ================= ЭКРАН ЗАГРУЗКИ ================= -->
     <div id="loading-screen" class="screen active">
         <div class="loading-logo">💎</div>
         <div class="loading-title">TON SAGA</div>
@@ -715,7 +761,6 @@
         <div class="loading-status" id="loading-status-text">Соединение с Telegram...</div>
     </div>
 
-    <!-- ================= ЭКРАН 1: ГЛАВНОЕ МЕНЮ ================= -->
     <div id="menu-screen" class="screen">
         <div class="header">
             <div class="profile" onclick="openProfile()" ontouchstart="openProfile()">
@@ -762,7 +807,6 @@
         </div>
     </div>
 
-    <!-- ================= ЭКРАН 2: ИГРОВОЙ ПРОЦЕСС ================= -->
     <div id="game-screen" class="screen">
         <div class="game-header">
             <button class="btn-back" onclick="backToMenu()" ontouchstart="backToMenu()">◀ Назад</button>
@@ -773,13 +817,27 @@
         </div>
 
         <div id="board-container"></div>
+        
+        <div class="booster-panel">
+            <div class="booster-btn" id="btn-boost-shuffle" onclick="useBooster('shuffle')" ontouchstart="useBooster('shuffle')">
+                <div class="booster-count" id="count-shuffle">1</div>
+                <div class="booster-icon">🔄</div>
+            </div>
+            <div class="booster-btn" id="btn-boost-rocket" onclick="useBooster('rocket')" ontouchstart="useBooster('rocket')">
+                <div class="booster-count" id="count-rocket">1</div>
+                <div class="booster-icon">🚀</div>
+            </div>
+            <div class="booster-btn" id="btn-boost-bomb" onclick="useBooster('bomb')" ontouchstart="useBooster('bomb')">
+                <div class="booster-count" id="count-bomb">1</div>
+                <div class="booster-icon">💣</div>
+            </div>
+        </div>
 
-        <div style="text-align: center; color: #aaa; font-size: 0.85rem; padding: 10px 0;">
+        <div id="game-hints" style="text-align: center; color: #aaa; font-size: 0.85rem; padding: 5px 0;">
             Собирай линии из 3 и более кристаллов одного цвета!
         </div>
     </div>
 
-    <!-- ================= ЭКРАН 3: МАГАЗИН ================= -->
     <div id="shop-screen" class="screen">
         <div class="game-header">
             <button class="btn-back" onclick="backToMenu()" ontouchstart="backToMenu()">◀ В меню</button>
@@ -842,7 +900,6 @@
         </div>
     </div>
 
-    <!-- ================= ЭКРАН 4: КВЕСТЫ ================= -->
     <div id="quests-screen" class="screen">
         <div class="game-header">
             <button class="btn-back" onclick="backToMenu()" ontouchstart="backToMenu()">◀ В меню</button>
@@ -914,7 +971,6 @@
         </div>
     </div>
     
-    <!-- ================= ЭКРАН 5: ПРОФИЛЬ ================= -->
     <div id="profile-screen" class="screen">
         <div class="game-header">
             <button class="btn-back" onclick="backToMenu()" ontouchstart="backToMenu()">◀ В меню</button>
@@ -961,12 +1017,11 @@
         
         <div class="wallet-section">
             <p>Привяжите кошелек для участия в PvP турнирах и вывода средств</p>
-            <button id="btn-wallet-connect" class="btn-ton" onclick="connectWallet()">💎 ПРИВЯЗАТЬ TON КОШЕЛЕК</button>
+            <button id="btn-wallet-connect" class="btn-ton">💎 ПРИВЯЗАТЬ TON КОШЕЛЕК</button>
         </div>
 
     </div>
 
-    <!-- ================= МОДАЛЬНОЕ ОКНО "ИГРА ОКОНЧЕНА" ================= -->
     <div id="game-over-modal">
         <div class="modal-content">
             <h2>ХОДЫ ЗАКОНЧИЛИСЬ</h2>
@@ -1005,10 +1060,8 @@
         ];
 
         const interval = setInterval(() => {
-            // Случайный прирост от 2 до 12 для эффекта "реальной" загрузки
             progress += Math.floor(Math.random() * 10) + 2;
             
-            // Меняем текст статуса в зависимости от прогресса
             if(progress > 20 && progress <= 40) statusText.innerText = loadingTexts[1];
             else if(progress > 40 && progress <= 70) statusText.innerText = loadingTexts[2];
             else if(progress > 70 && progress < 99) statusText.innerText = loadingTexts[3];
@@ -1020,14 +1073,13 @@
                 textPercent.innerText = '100%';
                 statusText.innerText = loadingTexts[4];
                 
-                // Задержка перед скрытием экрана загрузки
                 setTimeout(() => {
                     const loadingScreen = document.getElementById('loading-screen');
                     loadingScreen.style.opacity = '0';
                     setTimeout(() => {
                         loadingScreen.classList.remove('active');
                         document.getElementById('menu-screen').classList.add('active');
-                    }, 400); // время transition из CSS
+                    }, 400); 
                 }, 600);
             } else {
                 fill.style.width = progress + '%';
@@ -1059,14 +1111,48 @@
     let selectedTile = null;
     let isProcessing = false;
     
-    // Статистика игрока
+    // Статистика игрока и инвентарь (НОВОЕ)
     let totalGems = 12450; 
     let bestScore = 0;
     let gamesPlayed = 0;
     let questsCompleted = 0;
+    let inventory = { shuffle: 2, rocket: 2, bomb: 2 }; // Инвентарь бустеров
+    let activeBooster = null; // Текущий выбранный бустер
 
     const boardContainer = document.getElementById('board-container');
     const gameOverModal = document.getElementById('game-over-modal');
+    const hintsDisplay = document.getElementById('game-hints');
+
+    // --- Инициализация TonConnect ---
+    const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+        manifestUrl: 'https://raw.githubusercontent.com/ton-community/tutorials/main/03-client/test/public/tonconnect-manifest.json'
+    });
+
+    tonConnectUI.onStatusChange(wallet => {
+        const btn = document.getElementById('btn-wallet-connect');
+        if (wallet) {
+            const address = wallet.account.address;
+            const shortAddress = `${address.slice(0, 4)}...${address.slice(-4)}`;
+            btn.innerText = `✅ ПОДКЛЮЧЕН (${shortAddress})`;
+            btn.style.background = "linear-gradient(135deg, #00c853 0%, #b9f6ca 100%)";
+            btn.style.color = "#000";
+            btn.onclick = () => tonConnectUI.disconnect();
+        } else {
+            btn.innerText = "💎 ПРИВЯЗАТЬ TON КОШЕЛЕК";
+            btn.style.background = "linear-gradient(135deg, #0088cc 0%, #0055aa 100%)";
+            btn.style.color = "white";
+            btn.onclick = connectWallet;
+        }
+    });
+
+    async function connectWallet() {
+        try {
+            await tonConnectUI.openModal();
+        } catch (error) {
+            console.error("Ошибка при открытии TonConnect:", error);
+        }
+    }
+    document.getElementById('btn-wallet-connect').onclick = connectWallet;
 
     // --- Навигация по экранам ---
     function switchScreen(screenId) {
@@ -1077,6 +1163,7 @@
     function backToMenu() {
         switchScreen('menu-screen');
         gameOverModal.classList.remove('active');
+        activeBooster = null; // Сбрасываем бустер при выходе
         updateAllBalances();
     }
 
@@ -1108,28 +1195,24 @@
         setTimeout(() => { largeAvatar.style.transform = 'scale(1)'; }, 200);
     }
     
-    function connectWallet() {
-        const btn = document.getElementById('btn-wallet-connect');
-        btn.innerText = "Ожидание подтверждения...";
-        btn.style.background = "#555";
-        
-        setTimeout(() => {
-            btn.innerText = "✅ КОШЕЛЕК ПРИВЯЗАН (EQ...X9)";
-            btn.style.background = "linear-gradient(135deg, #00c853 0%, #b9f6ca 100%)";
-            btn.style.color = "#000";
-            btn.onclick = null;
-            alert("Кошелек успешно привязан!");
-        }, 1500);
-    }
-
-    // --- Логика магазина ---
+    // --- Логика магазина (ОБНОВЛЕНО ДЛЯ БУСТЕРОВ) ---
     function buyItem(itemId, priceStr) {
         if(priceStr.includes('TON')) {
-            alert(`Покупка ${itemId} за ${priceStr}. Здесь откроется окно оплаты через TonConnect!`);
+            alert(`Покупка ${itemId} за ${priceStr}. Здесь откроется окно TonConnect!`);
+            // Для теста начисляем премиум-бустеры бесплатно при клике
+            if (itemId === 'rocket' || itemId === 'bomb') {
+                inventory[itemId] += 3;
+                alert(`В ТЕСТОВОМ РЕЖИМЕ начислено 3 шт: ${itemId}`);
+            }
         } else {
             const cost = parseInt(priceStr.replace(/[^0-9]/g, ''));
             if(totalGems >= cost) {
                 totalGems -= cost;
+                
+                // Реальное пополнение инвентаря
+                if (itemId === 'shuffle') inventory.shuffle++;
+                if (itemId === 'moves') moves += 3;
+                
                 updateAllBalances();
                 alert(`Успешно куплено!`);
             } else {
@@ -1174,8 +1257,10 @@
         gameOverModal.classList.remove('active');
         score = 0;
         moves = 20;
+        activeBooster = null;
         document.getElementById('score-val').innerText = score;
         document.getElementById('moves-val').innerText = moves;
+        updateBoosterUI(); // Обновляем панель бустеров при старте
         initBoard();
     }
 
@@ -1187,9 +1272,7 @@
     function endGameAndReturn() {
         totalGems += score;
         gamesPlayed++;
-        if(score > bestScore) {
-            bestScore = score; 
-        }
+        if(score > bestScore) bestScore = score; 
         gameOverModal.classList.remove('active');
         backToMenu();
     }
@@ -1201,6 +1284,124 @@
         gameOverModal.classList.remove('active');
     }
 
+    // --- НОВОЕ: ЛОГИКА БУСТЕРОВ ---
+    function updateBoosterUI() {
+        document.getElementById('count-shuffle').innerText = inventory.shuffle;
+        document.getElementById('count-rocket').innerText = inventory.rocket;
+        document.getElementById('count-bomb').innerText = inventory.bomb;
+        
+        document.querySelectorAll('.booster-btn').forEach(btn => btn.classList.remove('active'));
+        if (activeBooster) {
+            document.getElementById(`btn-boost-${activeBooster}`).classList.add('active');
+            hintsDisplay.innerText = "Кликни на любую фишку, чтобы применить бустер!";
+            hintsDisplay.style.color = "var(--accent-gold)";
+        } else {
+            hintsDisplay.innerText = "Собирай линии из 3 и более кристаллов одного цвета!";
+            hintsDisplay.style.color = "#aaa";
+        }
+    }
+
+    function useBooster(type) {
+        if (isProcessing || moves <= 0) return;
+        
+        if (inventory[type] <= 0) {
+            alert("Нет бустеров этого типа! Купите в магазине.");
+            return;
+        }
+
+        if (type === 'shuffle') {
+            inventory.shuffle--;
+            updateBoosterUI();
+            shuffleBoard();
+            return;
+        }
+
+        if (activeBooster === type) {
+            activeBooster = null; // Отмена выбора
+            updateBoosterUI();
+            return;
+        }
+
+        activeBooster = type;
+        if(selectedTile) {
+            selectedTile.element.classList.remove('selected');
+            selectedTile = null;
+        }
+        updateBoosterUI();
+    }
+
+    async function applyBoosterToTile(r, c) {
+        isProcessing = true;
+        let matched = [];
+        
+        if (activeBooster === 'rocket') {
+            inventory.rocket--;
+            // Уничтожает всю горизонтальную линию
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                if (board[r][i].type) matched.push({r: r, c: i});
+            }
+        } else if (activeBooster === 'bomb') {
+            inventory.bomb--;
+            // Уничтожает зону 3x3
+            for (let i = Math.max(0, r-1); i <= Math.min(BOARD_SIZE-1, r+1); i++) {
+                for (let j = Math.max(0, c-1); j <= Math.min(BOARD_SIZE-1, c+1); j++) {
+                    if (board[i][j].type) matched.push({r: i, c: j});
+                }
+            }
+        }
+        
+        activeBooster = null;
+        updateBoosterUI();
+        
+        if (matched.length > 0) {
+            await handleMatches(matched);
+        } else {
+            isProcessing = false;
+        }
+    }
+
+    async function shuffleBoard() {
+        isProcessing = true;
+        
+        // Анимация сворачивания
+        for(let r=0; r<BOARD_SIZE; r++) {
+            for(let c=0; c<BOARD_SIZE; c++) {
+                board[r][c].element.style.transform = 'scale(0)';
+            }
+        }
+        await delay(200);
+        
+        // Перемешивание массива типов
+        let flatTiles = [];
+        for(let r=0; r<BOARD_SIZE; r++) {
+            for(let c=0; c<BOARD_SIZE; c++) {
+                flatTiles.push(board[r][c].type);
+            }
+        }
+        flatTiles.sort(() => Math.random() - 0.5); 
+        
+        let i = 0;
+        for(let r=0; r<BOARD_SIZE; r++) {
+            for(let c=0; c<BOARD_SIZE; c++) {
+                board[r][c].type = flatTiles[i++];
+                board[r][c].element.className = `tile tile-${board[r][c].type}`;
+                board[r][c].element.innerHTML = TILE_ICONS[board[r][c].type];
+                board[r][c].element.style.transform = 'scale(1)';
+            }
+        }
+        
+        await delay(200);
+        
+        // Проверяем, не собрались ли случайно линии после перемешивания
+        let nextMatches = checkMatches();
+        if (nextMatches.length > 0) {
+            await handleMatches(nextMatches);
+        } else {
+            isProcessing = false;
+        }
+    }
+
+    // --- Механика доски ---
     function initBoard() {
         boardContainer.innerHTML = '';
         board = [];
@@ -1234,6 +1435,13 @@
         const r = parseInt(tileEl.dataset.row);
         const c = parseInt(tileEl.dataset.col);
 
+        // Если включен режим бустера
+        if (activeBooster) {
+            applyBoosterToTile(r, c);
+            return;
+        }
+
+        // Обычная логика свайпа
         if (!selectedTile) {
             selectedTile = { r, c, element: tileEl };
             tileEl.classList.add('selected');
@@ -1378,6 +1586,8 @@
             await handleMatches(nextMatches);
         } else if (moves <= 0) {
             showGameOver();
+        } else {
+            isProcessing = false;
         }
     }
 
