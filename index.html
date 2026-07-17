@@ -1,11 +1,16 @@
+<!-- Версия: 1.0002 -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>TON Saga - Match 3</title>
+    <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- TonConnect UI SDK -->
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+    <!-- Adsgram SDK -->
+    <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
     <style>
         :root {
             --bg-color: #060818;
@@ -71,10 +76,10 @@
         }
 
         /* =========================================
-           ЭКРАН ЗАГРУЗКИ
+           ЭКРАН ЗАГРУЗКИ (НОВЫЙ)
            ========================================= */
         #loading-screen {
-            z-index: 9999;
+            z-index: 9999; /* Поверх всего */
             background: var(--bg-color);
             background-image: radial-gradient(circle at center, #0a1128 0%, #030510 100%);
             justify-content: center;
@@ -1017,7 +1022,7 @@
         
         <div class="wallet-section">
             <p>Привяжите кошелек для участия в PvP турнирах и вывода средств</p>
-            <button id="btn-wallet-connect" class="btn-ton">💎 ПРИВЯЗАТЬ TON КОШЕЛЕК</button>
+            <button id="btn-wallet-connect" class="btn-ton" onclick="connectWallet()">💎 ПРИВЯЗАТЬ TON КОШЕЛЕК</button>
         </div>
 
     </div>
@@ -1073,6 +1078,9 @@
                 textPercent.innerText = '100%';
                 statusText.innerText = loadingTexts[4];
                 
+                // Загружаем прогресс после экрана загрузки
+                loadUserProgress();
+                
                 setTimeout(() => {
                     const loadingScreen = document.getElementById('loading-screen');
                     loadingScreen.style.opacity = '0';
@@ -1101,6 +1109,10 @@
         }
     }
 
+    // --- Инициализация Adsgram ---
+    // (Позже необходимо заменить "1234" на реальный blockId из кабинета Adsgram)
+    const AdController = window.Adsgram ? window.Adsgram.init({ blockId: "1234" }) : null;
+
     // --- Глобальные переменные ---
     const BOARD_SIZE = 8;
     const TILE_TYPES = ['blue', 'yellow', 'purple', 'green', 'red'];
@@ -1111,13 +1123,58 @@
     let selectedTile = null;
     let isProcessing = false;
     
-    // Статистика игрока и инвентарь (НОВОЕ)
+    // Статистика игрока и инвентарь
     let totalGems = 12450; 
     let bestScore = 0;
     let gamesPlayed = 0;
     let questsCompleted = 0;
-    let inventory = { shuffle: 2, rocket: 2, bomb: 2 }; // Инвентарь бустеров
-    let activeBooster = null; // Текущий выбранный бустер
+    let inventory = { shuffle: 2, rocket: 2, bomb: 2 }; 
+    let activeBooster = null; 
+
+    // --- НОВОЕ: Сохранение и загрузка прогресса ---
+    function loadUserProgress() {
+        // В будущем здесь будет fetch запрос к бэкенду с передачей tg.initData
+        /*
+        fetch('https://твоя-игра.com/api/load', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ initData: tg ? tg.initData : '' })
+        }).then(res => res.json()).then(data => {...});
+        */
+        
+        const savedData = localStorage.getItem('tonSagaProgress');
+        if (savedData) {
+            const data = JSON.parse(savedData);
+            totalGems = data.totalGems !== undefined ? data.totalGems : 12450;
+            bestScore = data.bestScore !== undefined ? data.bestScore : 0;
+            gamesPlayed = data.gamesPlayed !== undefined ? data.gamesPlayed : 0;
+            questsCompleted = data.questsCompleted !== undefined ? data.questsCompleted : 0;
+            if (data.inventory) inventory = data.inventory;
+        }
+        updateAllBalances();
+    }
+
+    function saveUserProgress() {
+        const dataToSave = {
+            totalGems: totalGems,
+            bestScore: bestScore,
+            gamesPlayed: gamesPlayed,
+            questsCompleted: questsCompleted,
+            inventory: inventory
+        };
+        
+        // Сохраняем локально в браузере
+        localStorage.setItem('tonSagaProgress', JSON.stringify(dataToSave));
+        
+        // В будущем здесь будет отправка на сервер
+        /*
+        fetch('https://твоя-игра.com/api/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ initData: tg ? tg.initData : '', progress: dataToSave })
+        });
+        */
+    }
 
     const boardContainer = document.getElementById('board-container');
     const gameOverModal = document.getElementById('game-over-modal');
@@ -1163,7 +1220,7 @@
     function backToMenu() {
         switchScreen('menu-screen');
         gameOverModal.classList.remove('active');
-        activeBooster = null; // Сбрасываем бустер при выходе
+        activeBooster = null; 
         updateAllBalances();
     }
 
@@ -1194,26 +1251,24 @@
         largeAvatar.style.transform = 'scale(1.2)';
         setTimeout(() => { largeAvatar.style.transform = 'scale(1)'; }, 200);
     }
-    
-    // --- Логика магазина (ОБНОВЛЕНО ДЛЯ БУСТЕРОВ) ---
+
+    // --- Логика магазина ---
     function buyItem(itemId, priceStr) {
         if(priceStr.includes('TON')) {
             alert(`Покупка ${itemId} за ${priceStr}. Здесь откроется окно TonConnect!`);
-            // Для теста начисляем премиум-бустеры бесплатно при клике
             if (itemId === 'rocket' || itemId === 'bomb') {
                 inventory[itemId] += 3;
                 alert(`В ТЕСТОВОМ РЕЖИМЕ начислено 3 шт: ${itemId}`);
+                saveUserProgress(); // Сохраняем после покупки
             }
         } else {
             const cost = parseInt(priceStr.replace(/[^0-9]/g, ''));
             if(totalGems >= cost) {
                 totalGems -= cost;
-                
-                // Реальное пополнение инвентаря
                 if (itemId === 'shuffle') inventory.shuffle++;
                 if (itemId === 'moves') moves += 3;
-                
                 updateAllBalances();
+                saveUserProgress(); // Сохраняем после покупки
                 alert(`Успешно куплено!`);
             } else {
                 alert("Недостаточно очков (💎)!");
@@ -1226,6 +1281,7 @@
         totalGems += amount;
         questsCompleted++;
         updateAllBalances();
+        saveUserProgress(); // Сохраняем прогресс
         
         btnElement.innerText = "Забрано";
         btnElement.classList.add('disabled');
@@ -1260,7 +1316,7 @@
         activeBooster = null;
         document.getElementById('score-val').innerText = score;
         document.getElementById('moves-val').innerText = moves;
-        updateBoosterUI(); // Обновляем панель бустеров при старте
+        updateBoosterUI(); 
         initBoard();
     }
 
@@ -1273,18 +1329,33 @@
         totalGems += score;
         gamesPlayed++;
         if(score > bestScore) bestScore = score; 
+        
+        saveUserProgress(); // Сохраняем прогресс после игры
+        
         gameOverModal.classList.remove('active');
         backToMenu();
     }
 
+    // --- Интеграция рекламы ---
     function watchAdForMoves() {
-        alert("Здесь будет показана реклама Adsgram!");
-        moves += 5;
-        document.getElementById('moves-val').innerText = moves;
-        gameOverModal.classList.remove('active');
+        if (AdController) {
+            AdController.show().then((result) => {
+                moves += 5;
+                document.getElementById('moves-val').innerText = moves;
+                gameOverModal.classList.remove('active');
+                alert("Награда получена: +5 ходов! 🚀");
+            }).catch((result) => {
+                alert("Вы закрыли рекламу слишком рано. Ходы не начислены.");
+            });
+        } else {
+            alert("Имитация рекламы (скрипт не загружен).\n+5 ходов начислены для теста!");
+            moves += 5;
+            document.getElementById('moves-val').innerText = moves;
+            gameOverModal.classList.remove('active');
+        }
     }
 
-    // --- НОВОЕ: ЛОГИКА БУСТЕРОВ ---
+    // --- ЛОГИКА БУСТЕРОВ ---
     function updateBoosterUI() {
         document.getElementById('count-shuffle').innerText = inventory.shuffle;
         document.getElementById('count-rocket').innerText = inventory.rocket;
@@ -1312,12 +1383,13 @@
         if (type === 'shuffle') {
             inventory.shuffle--;
             updateBoosterUI();
+            saveUserProgress(); // Сохраняем трату
             shuffleBoard();
             return;
         }
 
         if (activeBooster === type) {
-            activeBooster = null; // Отмена выбора
+            activeBooster = null; 
             updateBoosterUI();
             return;
         }
@@ -1336,13 +1408,11 @@
         
         if (activeBooster === 'rocket') {
             inventory.rocket--;
-            // Уничтожает всю горизонтальную линию
             for (let i = 0; i < BOARD_SIZE; i++) {
                 if (board[r][i].type) matched.push({r: r, c: i});
             }
         } else if (activeBooster === 'bomb') {
             inventory.bomb--;
-            // Уничтожает зону 3x3
             for (let i = Math.max(0, r-1); i <= Math.min(BOARD_SIZE-1, r+1); i++) {
                 for (let j = Math.max(0, c-1); j <= Math.min(BOARD_SIZE-1, c+1); j++) {
                     if (board[i][j].type) matched.push({r: i, c: j});
@@ -1350,6 +1420,7 @@
             }
         }
         
+        saveUserProgress(); // Сохраняем трату
         activeBooster = null;
         updateBoosterUI();
         
@@ -1363,7 +1434,6 @@
     async function shuffleBoard() {
         isProcessing = true;
         
-        // Анимация сворачивания
         for(let r=0; r<BOARD_SIZE; r++) {
             for(let c=0; c<BOARD_SIZE; c++) {
                 board[r][c].element.style.transform = 'scale(0)';
@@ -1371,7 +1441,6 @@
         }
         await delay(200);
         
-        // Перемешивание массива типов
         let flatTiles = [];
         for(let r=0; r<BOARD_SIZE; r++) {
             for(let c=0; c<BOARD_SIZE; c++) {
@@ -1392,7 +1461,6 @@
         
         await delay(200);
         
-        // Проверяем, не собрались ли случайно линии после перемешивания
         let nextMatches = checkMatches();
         if (nextMatches.length > 0) {
             await handleMatches(nextMatches);
@@ -1435,13 +1503,11 @@
         const r = parseInt(tileEl.dataset.row);
         const c = parseInt(tileEl.dataset.col);
 
-        // Если включен режим бустера
         if (activeBooster) {
             applyBoosterToTile(r, c);
             return;
         }
 
-        // Обычная логика свайпа
         if (!selectedTile) {
             selectedTile = { r, c, element: tileEl };
             tileEl.classList.add('selected');
