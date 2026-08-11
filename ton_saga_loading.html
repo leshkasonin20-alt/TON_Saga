@@ -1,4 +1,4 @@
-<!-- Версия: 1.0002 -->
+<!-- Версия: 1.0003 -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -76,7 +76,7 @@
         }
 
         /* =========================================
-           ЭКРАН ЗАГРУЗКИ (НОВЫЙ)
+           ЭКРАН ЗАГРУЗКИ
            ========================================= */
         #loading-screen {
             z-index: 9999; /* Поверх всего */
@@ -748,12 +748,24 @@
         .tile-green { background: radial-gradient(circle, #b9f6ca, #00c853); }
         .tile-red { background: radial-gradient(circle, #ff8a80, #d50000); }
 
+        /* --- Отображение версии сборки --- */
+        #version-display {
+            position: fixed;
+            bottom: 5px;
+            width: 100%;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 10px;
+            pointer-events: none;
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
 
 <div id="game-container">
 
+    <!-- ================= ЭКРАН ЗАГРУЗКИ ================= -->
     <div id="loading-screen" class="screen active">
         <div class="loading-logo">💎</div>
         <div class="loading-title">TON SAGA</div>
@@ -766,6 +778,7 @@
         <div class="loading-status" id="loading-status-text">Соединение с Telegram...</div>
     </div>
 
+    <!-- ================= ЭКРАН 1: ГЛАВНОЕ МЕНЮ ================= -->
     <div id="menu-screen" class="screen">
         <div class="header">
             <div class="profile" onclick="openProfile()" ontouchstart="openProfile()">
@@ -812,6 +825,7 @@
         </div>
     </div>
 
+    <!-- ================= ЭКРАН 2: ИГРОВОЙ ПРОЦЕСС ================= -->
     <div id="game-screen" class="screen">
         <div class="game-header">
             <button class="btn-back" onclick="backToMenu()" ontouchstart="backToMenu()">◀ Назад</button>
@@ -843,6 +857,7 @@
         </div>
     </div>
 
+    <!-- ================= ЭКРАН 3: МАГАЗИН ================= -->
     <div id="shop-screen" class="screen">
         <div class="game-header">
             <button class="btn-back" onclick="backToMenu()" ontouchstart="backToMenu()">◀ В меню</button>
@@ -905,6 +920,7 @@
         </div>
     </div>
 
+    <!-- ================= ЭКРАН 4: КВЕСТЫ ================= -->
     <div id="quests-screen" class="screen">
         <div class="game-header">
             <button class="btn-back" onclick="backToMenu()" ontouchstart="backToMenu()">◀ В меню</button>
@@ -976,6 +992,7 @@
         </div>
     </div>
     
+    <!-- ================= ЭКРАН 5: ПРОФИЛЬ ================= -->
     <div id="profile-screen" class="screen">
         <div class="game-header">
             <button class="btn-back" onclick="backToMenu()" ontouchstart="backToMenu()">◀ В меню</button>
@@ -1022,11 +1039,12 @@
         
         <div class="wallet-section">
             <p>Привяжите кошелек для участия в PvP турнирах и вывода средств</p>
-            <button id="btn-wallet-connect" class="btn-ton" onclick="connectWallet()">💎 ПРИВЯЗАТЬ TON КОШЕЛЕК</button>
+            <button id="btn-wallet-connect" class="btn-ton">💎 ПРИВЯЗАТЬ TON КОШЕЛЕК</button>
         </div>
 
     </div>
 
+    <!-- ================= МОДАЛЬНОЕ ОКНО "ИГРА ОКОНЧЕНА" ================= -->
     <div id="game-over-modal">
         <div class="modal-content">
             <h2>ХОДЫ ЗАКОНЧИЛИСЬ</h2>
@@ -1044,9 +1062,13 @@
 
 </div>
 
+<!-- Отображение версии сборки -->
+<div id="version-display">Версия: 1.0003</div>
+
 <script>
     // --- Симуляция экрана загрузки при старте ---
     document.addEventListener("DOMContentLoaded", () => {
+        loadUserProgress();
         simulateLoading();
     });
 
@@ -1078,9 +1100,6 @@
                 textPercent.innerText = '100%';
                 statusText.innerText = loadingTexts[4];
                 
-                // Загружаем прогресс после экрана загрузки
-                loadUserProgress();
-                
                 setTimeout(() => {
                     const loadingScreen = document.getElementById('loading-screen');
                     loadingScreen.style.opacity = '0';
@@ -1110,7 +1129,6 @@
     }
 
     // --- Инициализация Adsgram ---
-    // (Позже необходимо заменить "1234" на реальный blockId из кабинета Adsgram)
     const AdController = window.Adsgram ? window.Adsgram.init({ blockId: "1234" }) : null;
 
     // --- Глобальные переменные ---
@@ -1131,17 +1149,8 @@
     let inventory = { shuffle: 2, rocket: 2, bomb: 2 }; 
     let activeBooster = null; 
 
-    // --- НОВОЕ: Сохранение и загрузка прогресса ---
+    // --- Сохранение и загрузка прогресса ---
     function loadUserProgress() {
-        // В будущем здесь будет fetch запрос к бэкенду с передачей tg.initData
-        /*
-        fetch('https://твоя-игра.com/api/load', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ initData: tg ? tg.initData : '' })
-        }).then(res => res.json()).then(data => {...});
-        */
-        
         const savedData = localStorage.getItem('tonSagaProgress');
         if (savedData) {
             const data = JSON.parse(savedData);
@@ -1162,18 +1171,7 @@
             questsCompleted: questsCompleted,
             inventory: inventory
         };
-        
-        // Сохраняем локально в браузере
         localStorage.setItem('tonSagaProgress', JSON.stringify(dataToSave));
-        
-        // В будущем здесь будет отправка на сервер
-        /*
-        fetch('https://твоя-игра.com/api/save', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ initData: tg ? tg.initData : '', progress: dataToSave })
-        });
-        */
     }
 
     const boardContainer = document.getElementById('board-container');
@@ -1182,7 +1180,7 @@
 
     // --- Инициализация TonConnect ---
     const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-        manifestUrl: 'https://raw.githubusercontent.com/ton-community/tutorials/main/03-client/test/public/tonconnect-manifest.json'
+        manifestUrl: 'https://leshkasonin20-alt.github.io/TON_Saga/tonconnect-manifest.json'
     });
 
     tonConnectUI.onStatusChange(wallet => {
@@ -1251,7 +1249,7 @@
         largeAvatar.style.transform = 'scale(1.2)';
         setTimeout(() => { largeAvatar.style.transform = 'scale(1)'; }, 200);
     }
-
+    
     // --- Логика магазина ---
     function buyItem(itemId, priceStr) {
         if(priceStr.includes('TON')) {
@@ -1259,7 +1257,7 @@
             if (itemId === 'rocket' || itemId === 'bomb') {
                 inventory[itemId] += 3;
                 alert(`В ТЕСТОВОМ РЕЖИМЕ начислено 3 шт: ${itemId}`);
-                saveUserProgress(); // Сохраняем после покупки
+                saveUserProgress();
             }
         } else {
             const cost = parseInt(priceStr.replace(/[^0-9]/g, ''));
@@ -1268,7 +1266,7 @@
                 if (itemId === 'shuffle') inventory.shuffle++;
                 if (itemId === 'moves') moves += 3;
                 updateAllBalances();
-                saveUserProgress(); // Сохраняем после покупки
+                saveUserProgress();
                 alert(`Успешно куплено!`);
             } else {
                 alert("Недостаточно очков (💎)!");
@@ -1281,7 +1279,7 @@
         totalGems += amount;
         questsCompleted++;
         updateAllBalances();
-        saveUserProgress(); // Сохраняем прогресс
+        saveUserProgress();
         
         btnElement.innerText = "Забрано";
         btnElement.classList.add('disabled');
@@ -1329,14 +1327,11 @@
         totalGems += score;
         gamesPlayed++;
         if(score > bestScore) bestScore = score; 
-        
-        saveUserProgress(); // Сохраняем прогресс после игры
-        
+        saveUserProgress();
         gameOverModal.classList.remove('active');
         backToMenu();
     }
 
-    // --- Интеграция рекламы ---
     function watchAdForMoves() {
         if (AdController) {
             AdController.show().then((result) => {
@@ -1383,7 +1378,7 @@
         if (type === 'shuffle') {
             inventory.shuffle--;
             updateBoosterUI();
-            saveUserProgress(); // Сохраняем трату
+            saveUserProgress();
             shuffleBoard();
             return;
         }
@@ -1420,7 +1415,7 @@
             }
         }
         
-        saveUserProgress(); // Сохраняем трату
+        saveUserProgress();
         activeBooster = null;
         updateBoosterUI();
         
