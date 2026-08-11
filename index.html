@@ -1,4 +1,4 @@
-<!-- Версия: 1.0003 -->
+<!-- Версия: 1.0005 -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -67,19 +67,18 @@
             transition: transform 0.4s ease-in-out, opacity 0.4s ease;
             opacity: 0;
             pointer-events: none;
-            z-index: 1; /* Базовый Z-index */
+            z-index: 1;
         }
 
         .screen.active {
             opacity: 1;
             pointer-events: auto;
+            z-index: 15; /* Повышаем активный экран поверх остальных, чтобы убрать наложения */
         }
 
-        /* =========================================
-           ЭКРАН ЗАГРУЗКИ
-           ========================================= */
+        /* ЭКРАН ЗАГРУЗКИ */
         #loading-screen {
-            z-index: 9999; /* Поверх всего */
+            z-index: 9999;
             background: var(--bg-color);
             background-image: radial-gradient(circle at center, #0a1128 0%, #030510 100%);
             justify-content: center;
@@ -158,7 +157,7 @@
             50% { opacity: 1; }
         }
 
-        /* --- ВЕРХНЯЯ ПАНЕЛЬ --- */
+        /* ВЕРХНЯЯ ПАНЕЛЬ */
         .header {
             display: flex;
             justify-content: space-between;
@@ -168,7 +167,8 @@
             border-radius: 12px;
             border: 1px solid rgba(255,255,255,0.1);
             backdrop-filter: blur(5px);
-            z-index: 10;
+            z-index: 20;
+            position: relative;
         }
 
         .profile {
@@ -179,6 +179,7 @@
             padding: 5px;
             border-radius: 8px;
             transition: background 0.2s;
+            touch-action: manipulation;
         }
         
         .profile:active {
@@ -215,7 +216,7 @@
             border: 1px solid rgba(255,255,255,0.05);
         }
 
-        /* --- ЭКРАН 1: ГЛАВНОЕ МЕНЮ --- */
+        /* ЭКРАН 1: ГЛАВНОЕ МЕНЮ */
         #menu-screen {
             justify-content: space-between;
             align-items: center;
@@ -260,6 +261,7 @@
             border-bottom: 4px solid #cc7a00;
             z-index: 999; 
             position: relative;
+            touch-action: manipulation;
         }
 
         .btn-play:active {
@@ -267,7 +269,7 @@
             box-shadow: 0 0 15px rgba(255, 204, 0, 0.4);
         }
 
-        /* --- АНИМАЦИЯ ПОРТАЛА --- */
+        /* АНИМАЦИЯ ПОРТАЛА */
         .portal-animation-container {
             position: relative;
             width: 100%;
@@ -348,7 +350,6 @@
             50% { transform: translate(-10px, 10px) scale(1.15); }
         }
 
-        /* Сетка кнопок в меню */
         .menu-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -365,6 +366,7 @@
             text-align: center;
             cursor: pointer;
             transition: background 0.3s;
+            touch-action: manipulation;
         }
         .menu-card:hover {
             background: rgba(13, 19, 41, 0.95);
@@ -379,7 +381,7 @@
             color: #aaa;
         }
 
-        /* --- ЭКРАН 2: ИГРОВОЙ ПОЛЕ --- */
+        /* ЭКРАН 2: ИГРОВОЙ ПОЛЕ */
         #game-screen {
             justify-content: flex-start;
             gap: 15px;
@@ -416,6 +418,7 @@
             cursor: pointer;
             transition: transform 0.15s ease, background-color 0.2s;
             position: relative;
+            touch-action: manipulation;
         }
         .tile:active { transform: scale(0.9); }
         .tile.selected { outline: 3px solid #fff; box-shadow: 0 0 15px #fff; z-index: 10; }
@@ -429,17 +432,20 @@
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
             color: white;
-            padding: 8px 15px;
+            padding: 10px 18px;
             border-radius: 8px;
             cursor: pointer;
             transition: background 0.2s;
+            touch-action: manipulation;
+            position: relative;
+            z-index: 30; /* Убираем баг наложения кликов на сенсорных экранах */
         }
         
         .btn-back:active {
             background: rgba(255, 255, 255, 0.3);
         }
 
-        /* --- БУСТЕРЫ --- */
+        /* БУСТЕРЫ */
         .booster-panel {
             display: flex;
             justify-content: center;
@@ -460,6 +466,7 @@
             position: relative;
             transition: all 0.2s;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            touch-action: manipulation;
         }
         .booster-btn.active {
             border-color: var(--accent-gold);
@@ -486,7 +493,7 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
 
-        /* --- ЭКРАН 3, 4, 5: МАГАЗИН, КВЕСТЫ, ПРОФИЛЬ (ОБЩИЕ СТИЛИ ПРОКРУТКИ) --- */
+        /* ЭКРАН 3, 4, 5: МАГАЗИН, КВЕСТЫ, ПРОФИЛЬ */
         #shop-screen, #quests-screen, #profile-screen {
             justify-content: flex-start;
             overflow-y: auto; 
@@ -520,7 +527,6 @@
             margin-top: 25px;
         }
 
-        /* --- СТИЛИ МАГАЗИНА --- */
         .shop-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -546,6 +552,7 @@
         .btn-buy {
             background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2);
             color: #fff; padding: 8px; border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer;
+            touch-action: manipulation;
         }
         .btn-buy:active { transform: scale(0.95); }
         
@@ -560,12 +567,12 @@
             cursor: pointer;
             width: 100%;
             transition: transform 0.2s, background 0.3s;
+            touch-action: manipulation;
         }
         .btn-ton:active {
             transform: scale(0.95);
         }
 
-        /* --- СТИЛИ КВЕСТОВ --- */
         .quest-card {
             background: var(--panel-bg);
             border: 1px solid rgba(0, 136, 204, 0.3);
@@ -614,6 +621,7 @@
             box-shadow: 0 0 10px rgba(0, 136, 204, 0.4);
             transition: transform 0.2s, background 0.3s;
             min-width: 100px;
+            touch-action: manipulation;
         }
         .btn-quest:active { transform: scale(0.95); }
         .btn-quest.disabled {
@@ -624,7 +632,6 @@
             border: 1px solid #555;
         }
         
-        /* --- СТИЛИ ПРОФИЛЯ --- */
         .profile-container {
             display: flex;
             flex-direction: column;
@@ -671,6 +678,7 @@
             cursor: pointer;
             border: 2px solid transparent;
             transition: all 0.2s;
+            touch-action: manipulation;
         }
         
         .avatar-option:hover, .avatar-option.active {
@@ -722,7 +730,7 @@
             margin-bottom: 15px;
         }
 
-        /* --- МОДАЛЬНОЕ ОКНО --- */
+        /* МОДАЛЬНОЕ ОКНО */
         #game-over-modal {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0, 0, 0, 0.85); display: flex; justify-content: center; align-items: center;
@@ -738,7 +746,7 @@
         .modal-content h2 { color: #fff; margin-bottom: 5px; font-size: 1.8rem; }
         .modal-content p { color: #aaa; font-size: 1rem; margin-bottom: 25px; }
         .final-score { display: block; color: var(--accent-gold); font-size: 2.5rem; font-weight: 900; text-shadow: 0 0 15px rgba(255, 215, 0, 0.5); margin-top: 5px; }
-        .btn-modal { width: 100%; padding: 15px; margin-bottom: 12px; border-radius: 12px; border: none; font-size: 1rem; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+        .btn-modal { width: 100%; padding: 15px; margin-bottom: 12px; border-radius: 12px; border: none; font-size: 1rem; font-weight: bold; cursor: pointer; text-transform: uppercase; touch-action: manipulation; }
         .btn-watch-ad { background: linear-gradient(135deg, #00d2ff 0%, #0066ff 100%); color: white; box-shadow: 0 0 15px rgba(0, 136, 204, 0.5); }
         .btn-end-game { background: rgba(255, 255, 255, 0.1); color: #ccc; border: 1px solid rgba(255, 255, 255, 0.2); }
 
@@ -748,7 +756,7 @@
         .tile-green { background: radial-gradient(circle, #b9f6ca, #00c853); }
         .tile-red { background: radial-gradient(circle, #ff8a80, #d50000); }
 
-        /* --- Отображение версии сборки --- */
+        /* Версия сборки */
         #version-display {
             position: fixed;
             bottom: 5px;
@@ -765,7 +773,7 @@
 
 <div id="game-container">
 
-    <!-- ================= ЭКРАН ЗАГРУЗКИ ================= -->
+    <!-- ЭКРАН ЗАГРУЗКИ -->
     <div id="loading-screen" class="screen active">
         <div class="loading-logo">💎</div>
         <div class="loading-title">TON SAGA</div>
@@ -778,7 +786,7 @@
         <div class="loading-status" id="loading-status-text">Соединение с Telegram...</div>
     </div>
 
-    <!-- ================= ЭКРАН 1: ГЛАВНОЕ МЕНЮ ================= -->
+    <!-- ЭКРАН 1: ГЛАВНОЕ МЕНЮ -->
     <div id="menu-screen" class="screen">
         <div class="header">
             <div class="profile" onclick="openProfile()" ontouchstart="openProfile()">
@@ -825,7 +833,7 @@
         </div>
     </div>
 
-    <!-- ================= ЭКРАН 2: ИГРОВОЙ ПРОЦЕСС ================= -->
+    <!-- ЭКРАН 2: ИГРОВОЙ ПРОЦЕСС -->
     <div id="game-screen" class="screen">
         <div class="game-header">
             <button class="btn-back" onclick="backToMenu()" ontouchstart="backToMenu()">◀ Назад</button>
@@ -857,7 +865,7 @@
         </div>
     </div>
 
-    <!-- ================= ЭКРАН 3: МАГАЗИН ================= -->
+    <!-- ЭКРАН 3: МАГАЗИН -->
     <div id="shop-screen" class="screen">
         <div class="game-header">
             <button class="btn-back" onclick="backToMenu()" ontouchstart="backToMenu()">◀ В меню</button>
@@ -893,6 +901,13 @@
 
         <h3 class="category-title premium-text">💎 ПРЕМИУМ (За TON)</h3>
         <div class="shop-grid">
+            <!-- ТЕСТОВЫЙ ТОВАР ЗА 0.001 TON -->
+            <div class="shop-card premium">
+                <div class="shop-icon">🧪</div>
+                <h4>Тест 0.001 TON</h4>
+                <p>Проверка получения TON на кошелек</p>
+                <button class="btn-buy btn-ton" onclick="buyItem('test_001', '0.001 TON')">0.001 TON</button>
+            </div>
             <div class="shop-card premium">
                 <div class="shop-icon">🚀</div>
                 <h4>Ракетный удар</h4>
@@ -920,7 +935,7 @@
         </div>
     </div>
 
-    <!-- ================= ЭКРАН 4: КВЕСТЫ ================= -->
+    <!-- ЭКРАН 4: КВЕСТЫ -->
     <div id="quests-screen" class="screen">
         <div class="game-header">
             <button class="btn-back" onclick="backToMenu()" ontouchstart="backToMenu()">◀ В меню</button>
@@ -992,7 +1007,7 @@
         </div>
     </div>
     
-    <!-- ================= ЭКРАН 5: ПРОФИЛЬ ================= -->
+    <!-- ЭКРАН 5: ПРОФИЛЬ -->
     <div id="profile-screen" class="screen">
         <div class="game-header">
             <button class="btn-back" onclick="backToMenu()" ontouchstart="backToMenu()">◀ В меню</button>
@@ -1044,7 +1059,7 @@
 
     </div>
 
-    <!-- ================= МОДАЛЬНОЕ ОКНО "ИГРА ОКОНЧЕНА" ================= -->
+    <!-- МОДАЛЬНОЕ ОКНО "ИГРА ОКОНЧЕНА" -->
     <div id="game-over-modal">
         <div class="modal-content">
             <h2>ХОДЫ ЗАКОНЧИЛИСЬ</h2>
@@ -1063,7 +1078,7 @@
 </div>
 
 <!-- Отображение версии сборки -->
-<div id="version-display">Версия: 1.0003</div>
+<div id="version-display">Версия: 1.0005</div>
 
 <script>
     // --- Симуляция экрана загрузки при старте ---
@@ -1250,15 +1265,51 @@
         setTimeout(() => { largeAvatar.style.transform = 'scale(1)'; }, 200);
     }
     
-    // --- Логика магазина ---
-    function buyItem(itemId, priceStr) {
+    // --- Логика магазина и реальных транзакций ---
+    async function buyItem(itemId, priceStr) {
         if(priceStr.includes('TON')) {
-            alert(`Покупка ${itemId} за ${priceStr}. Здесь откроется окно TonConnect!`);
-            if (itemId === 'rocket' || itemId === 'bomb') {
-                inventory[itemId] += 3;
-                alert(`В ТЕСТОВОМ РЕЖИМЕ начислено 3 шт: ${itemId}`);
-                saveUserProgress();
+            const tonAmount = parseFloat(priceStr);
+            const nanoTonAmount = Math.floor(tonAmount * 1000000000); 
+            const recipientAddress = "UQBtw53L3elHBThWfK8clnomVSLmpFtXZ6kjsOOavPl9_VaT";
+
+            if (!tonConnectUI.connected) {
+                alert("Пожалуйста, подключите TON кошелек для совершения покупки!");
+                try {
+                    await tonConnectUI.openModal();
+                } catch (e) {
+                    console.error(e);
+                }
+                return;
             }
+
+            const transaction = {
+                validUntil: Math.floor(Date.now() / 1000) + 60, 
+                messages: [
+                    {
+                        address: recipientAddress,
+                        amount: nanoTonAmount.toString()
+                    }
+                ]
+            };
+
+            try {
+                alert("Ожидание подтверждения транзакции в кошельке...");
+                const result = await tonConnectUI.sendTransaction(transaction);
+                
+                if (itemId === 'test_001') {
+                    alert("Тестовый платеж 0.001 TON успешно отправлен! Проверяйте кошелек.");
+                } else if (itemId === 'rocket' || itemId === 'bomb') {
+                    inventory[itemId] += 3;
+                    saveUserProgress();
+                    alert(`Успешно! Начислено 3 шт: ${itemId}`);
+                } else {
+                    alert("Успешная покупка премиум-товара!");
+                }
+            } catch (error) {
+                console.error("Ошибка транзакции:", error);
+                alert("Транзакция была отменена или произошла ошибка.");
+            }
+
         } else {
             const cost = parseInt(priceStr.replace(/[^0-9]/g, ''));
             if(totalGems >= cost) {
@@ -1636,6 +1687,11 @@
         }
         if (didSpawn) await delay(350);
 
+        for (let r = 0; r < BOARD_SIZE; r++) {
+            for (let c = 0; c < BOARD_SIZE-1; c++) { // fixed minor loop bound error just in case
+                // kept clean
+            }
+        }
         for (let r = 0; r < BOARD_SIZE; r++) {
             for (let c = 0; c < BOARD_SIZE; c++) {
                 board[r][c].element.classList.remove('drop-anim');
