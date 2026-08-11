@@ -3,99 +3,1283 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TON Saga - Cosmic Saga</title>
+    <title>TON Saga - Match 3 & Heroes</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
     <style>
         :root {
             --bg-color: #060818;
-            --panel-bg: rgba(13, 19, 41, 0.9);
+            --panel-bg: rgba(13, 19, 41, 0.85);
+            --border-glow: #0088cc;
             --accent-gold: #ffd700;
             --boss-red: #ff3333;
+            --fire-color: #ff5500;
+            --water-color: #0088ff;
         }
-        * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; }
-        body { background: var(--bg-color); color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; display: flex; justify-content: center; align-items: center; }
-        #game-container { width: 100%; max-width: 480px; height: 100vh; position: relative; border-radius: 16px; overflow: hidden; background: #050814; }
-        .screen { position: absolute; width: 100%; height: 100%; top: 0; left: 0; opacity: 0; visibility: hidden; z-index: 1; padding: 20px; transition: opacity 0.3s; }
-        .screen.active { opacity: 1; visibility: visible; z-index: 10; }
 
-        /* Панель героев в битве */
-        .hero-abilities-panel { display: flex; justify-content: space-between; padding: 10px; background: rgba(0,0,0,0.6); border-top: 2px solid #0088cc; z-index: 20; position: absolute; bottom: 0; width: 100%; }
-        .hero-slot { width: 23%; text-align: center; }
-        .hero-img { width: 100%; border-radius: 8px; border: 2px solid #0088cc; cursor: pointer; }
-        .mana-bar { height: 6px; background: #222; margin-top: 4px; border-radius: 3px; overflow: hidden; }
-        .mana-fill { height: 100%; background: #00d2ff; width: 0%; transition: width 0.3s; }
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg-color);
+            background-image: radial-gradient(circle at center, #111e40 0%, #050814 100%);
+            color: #fff;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Контейнер игры */
+        #game-container {
+            width: 100%;
+            max-width: 480px;
+            height: 100vh;
+            max-height: 850px;
+            position: relative;
+            border: 2px solid rgba(0, 136, 204, 0.3);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 0 30px rgba(0, 136, 204, 0.2);
+            background: url('https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=1000') no-repeat center center;
+            background-size: cover;
+        }
+
+        /* Экраны */
+        .screen {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            z-index: 1;
+            transition: opacity 0.3s ease;
+        }
+
+        .screen.active {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            z-index: 15;
+        }
+
+        /* ЭКРАН ЗАГРУЗКИ */
+        #loading-screen {
+            z-index: 9999;
+            background: var(--bg-color);
+            background-image: radial-gradient(circle at center, #0a1128 0%, #030510 100%);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loading-logo {
+            font-size: 5rem;
+            animation: floatLogo 2s infinite ease-in-out;
+            margin-bottom: 20px;
+            filter: drop-shadow(0 0 25px rgba(0, 229, 255, 0.8));
+        }
+
+        .loading-title {
+            font-size: 2.5rem;
+            font-weight: 900;
+            background: linear-gradient(180deg, #fff 30%, #ffd700 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 3px;
+            margin-bottom: 40px;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+        }
+
+        @keyframes floatLogo {
+            0%, 100% { transform: translateY(0) scale(1) rotate(0deg); }
+            50% { transform: translateY(-15px) scale(1.05) rotate(5deg); }
+        }
+
+        .loading-bar-container {
+            width: 80%;
+            max-width: 300px;
+            height: 12px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid rgba(0, 229, 255, 0.2);
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        .loading-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #0088cc, #00e5ff, #fff);
+            background-size: 200% 100%;
+            box-shadow: 0 0 15px #00e5ff;
+            border-radius: 10px;
+            transition: width 0.1s ease-out;
+            animation: moveGradient 2s linear infinite;
+        }
+
+        @keyframes moveGradient {
+            0% { background-position: 100% 0; }
+            100% { background-position: -100% 0; }
+        }
+
+        .loading-text {
+            margin-top: 15px;
+            color: #00e5ff;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            animation: pulseText 1.5s infinite;
+        }
+
+        .loading-status {
+            color: #aaa;
+            font-size: 0.7rem;
+            margin-top: 5px;
+            letter-spacing: 1px;
+        }
+
+        @keyframes pulseText {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        /* ВЕРХНЯЯ ПАНЕЛЬ */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--panel-bg);
+            padding: 10px 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(5px);
+            z-index: 20;
+            position: relative;
+        }
+
+        .profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 8px;
+            transition: background 0.2s;
+            touch-action: manipulation;
+        }
         
-        #board-container { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin-top: 10px; }
-        .tile { aspect-ratio: 1; border-radius: 8px; display: flex; justify-content: center; align-items: center; cursor: pointer; }
-        .btn-back { width: 40px; height: 40px; background: rgba(255,255,255,0.1); border-radius: 50%; border: none; color: #fff; cursor: pointer; }
+        .profile:active {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            background: #0088cc;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .stats-block {
+            display: flex;
+            gap: 8px;
+        }
+
+        .stat-badge {
+            background: rgba(0,0,0,0.5);
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        /* ЭКРАН 1: ГЛАВНОЕ МЕНЮ */
+        #menu-screen {
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .game-title {
+            text-align: center;
+            margin-top: 5px;
+            z-index: 10;
+        }
+
+        .game-title h1 {
+            font-size: 2.6rem;
+            font-weight: 900;
+            background: linear-gradient(180deg, #fff 30%, #ffd700 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            letter-spacing: 2px;
+        }
+
+        .game-title p {
+            color: #00e5ff;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin-top: 3px;
+        }
+
+        .boss-preview-card {
+            background: linear-gradient(135deg, rgba(255, 51, 51, 0.2), rgba(13, 19, 41, 0.9));
+            border: 2px solid var(--boss-red);
+            border-radius: 14px;
+            padding: 10px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(255, 51, 51, 0.3);
+            margin: 3px 0;
+        }
+        .boss-preview-card h3 {
+            color: #ff6666;
+            font-size: 1rem;
+            margin-bottom: 2px;
+        }
+        .boss-preview-card p {
+            font-size: 0.75rem;
+            color: #ccc;
+        }
+
+        .btn-play {
+            background: linear-gradient(135deg, #ffcc00 0%, #ff9900 100%);
+            border: none;
+            border-radius: 20px;
+            padding: 14px 45px;
+            color: #000;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 0 25px rgba(255, 204, 0, 0.6);
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-transform: uppercase;
+            border-bottom: 4px solid #cc7a00;
+            z-index: 999; 
+            position: relative;
+            touch-action: manipulation;
+        }
+
+        .btn-play:active {
+            transform: scale(0.95);
+            box-shadow: 0 0 15px rgba(255, 204, 0, 0.4);
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* 3 колонки */
+            gap: 8px;
+            width: 100%;
+            margin-bottom: 8px;
+            z-index: 10;
+        }
+        /* Центрируем последние 2 кнопки */
+        .menu-grid .menu-card:nth-child(4) { grid-column: 1 / 3; }
+        .menu-grid .menu-card:nth-child(5) { grid-column: 2 / 4; margin-left: -50%; margin-right: 50%; }
+
+        .menu-card {
+            background: var(--panel-bg);
+            border: 1px solid rgba(0, 136, 204, 0.3);
+            border-radius: 12px;
+            padding: 10px 5px;
+            text-align: center;
+            cursor: pointer;
+            transition: background 0.3s;
+            touch-action: manipulation;
+        }
+        .menu-card:hover {
+            background: rgba(13, 19, 41, 0.95);
+        }
+        .menu-card h3 {
+            font-size: 0.8rem;
+            color: #0088cc;
+            margin-bottom: 2px;
+            text-transform: uppercase;
+        }
+        .menu-card p {
+            font-size: 0.65rem;
+            color: #aaa;
+        }
+
+        /* ЭКРАН 2: БИТВА С БОССОМ */
+        #game-screen {
+            justify-content: flex-start;
+            gap: 12px;
+        }
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 2px;
+        }
+
+        .boss-battle-panel {
+            background: rgba(40, 10, 10, 0.85);
+            border: 2px solid var(--boss-red);
+            border-radius: 12px;
+            padding: 10px;
+            width: 100%;
+            box-shadow: 0 0 15px rgba(255, 51, 51, 0.4);
+        }
+        .boss-info-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+            font-weight: bold;
+        }
+        .boss-hp-bar-container {
+            width: 100%;
+            height: 14px;
+            background: rgba(0,0,0,0.6);
+            border-radius: 7px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 51, 51, 0.5);
+        }
+        .boss-hp-bar-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #ff3333, #ff9933);
+            border-radius: 7px;
+            transition: width 0.3s ease-out;
+        }
+
+        #board-container {
+            width: 100%;
+            aspect-ratio: 1;
+            background: rgba(5, 10, 25, 0.9);
+            border: 3px solid #0088cc;
+            border-radius: 12px;
+            padding: 8px;
+            box-shadow: 0 0 20px rgba(0, 136, 204, 0.4);
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            gap: 4px;
+            position: relative;
+        }
+        .tile {
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: transform 0.15s ease, background-color 0.2s;
+            position: relative;
+            touch-action: manipulation;
+        }
+        .tile:active { transform: scale(0.9); }
+        .tile.selected { outline: 3px solid #fff; box-shadow: 0 0 15px #fff; z-index: 10; }
+
+        @keyframes popOut { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.2); opacity: 0.8; } 100% { transform: scale(0); opacity: 0; } }
+        .match-anim { animation: popOut 0.25s ease-in forwards; }
+        @keyframes slideDown { 0% { transform: translateY(-150%); opacity: 0.5; } 70% { transform: translateY(10%); opacity: 1; } 100% { transform: translateY(0); opacity: 1; } }
+        .drop-anim { animation: slideDown 0.35s ease-out forwards; }
+
+        .btn-back {
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            touch-action: manipulation;
+            z-index: 30;
+        }
+        .btn-back:active { background: rgba(255, 255, 255, 0.35); transform: scale(0.92); }
+
+        /* БУСТЕРЫ */
+        .booster-panel {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            width: 100%;
+            padding: 2px 0;
+        }
+        .booster-btn {
+            background: var(--panel-bg);
+            border: 2px solid rgba(0, 136, 204, 0.5);
+            border-radius: 12px;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            touch-action: manipulation;
+        }
+        .booster-btn.active {
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 15px var(--accent-gold);
+            transform: scale(1.1);
+            background: rgba(40, 30, 0, 0.8);
+        }
+        .booster-icon { font-size: 1.3rem; }
+        .booster-count {
+            position: absolute; top: -6px; right: -6px; background: #e53935; color: white; border-radius: 50%;
+            width: 18px; height: 18px; font-size: 0.6rem; display: flex; justify-content: center; align-items: center;
+            font-weight: bold; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        /* --- НОВАЯ ПАНЕЛЬ ГЕРОЕВ (В БОЮ) --- */
+        .hero-abilities-panel {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: auto;
+            padding-bottom: 10px;
+        }
+        .hero-slot {
+            width: 23%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .hero-img {
+            width: 100%;
+            border-radius: 8px;
+            border: 2px solid rgba(0, 136, 204, 0.5);
+            cursor: pointer;
+            transition: transform 0.2s, border-color 0.2s;
+            touch-action: manipulation;
+        }
+        .hero-img:active { transform: scale(0.9); }
+        .hero-img.ready { 
+            border-color: var(--accent-gold); 
+            box-shadow: 0 0 10px var(--accent-gold); 
+            animation: pulseImage 1s infinite alternate; 
+        }
+        @keyframes pulseImage { from { filter: brightness(1); } to { filter: brightness(1.3); } }
+        
+        .mana-bar {
+            width: 100%; height: 6px; background: rgba(0,0,0,0.6);
+            border: 1px solid #333; border-radius: 3px; margin-top: 4px; overflow: hidden;
+        }
+        .mana-fill { height: 100%; width: 0%; transition: width 0.3s; }
+        .mana-fill.blue { background: #00d2ff; }
+        .mana-fill.green { background: #00c853; }
+        .mana-fill.purple { background: #aa00ff; }
+        .mana-fill.red { background: #ff3333; }
+
+        /* ЭКРАН 3, 4, 5, 6: СЮЖЕТ, МАГАЗИН, КВЕСТЫ, ПРОФИЛЬ, ГЕРОИ (ОБЩИЕ СТИЛИ ПРОКРУТКИ) */
+        #story-screen, #shop-screen, #quests-screen, #profile-screen, #heroes-screen {
+            justify-content: flex-start;
+            overflow-y: auto; 
+            padding-bottom: 30px;
+        }
+
+        .screen-title {
+            text-align: center; color: var(--accent-gold); font-size: 1.8rem; font-weight: 900; text-transform: uppercase;
+            letter-spacing: 2px; margin: 8px 0 15px 0; text-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+        }
+
+        .category-title {
+            font-size: 1rem; color: #00e5ff; margin-bottom: 10px; padding-bottom: 5px;
+            border-bottom: 1px solid rgba(0, 229, 255, 0.3); display: flex; align-items: center; gap: 8px;
+        }
+        .premium-text { color: var(--accent-gold); border-bottom: 1px solid rgba(255, 215, 0, 0.3); margin-top: 20px; }
+
+        /* --- СТИЛИ КОЛЛЕКЦИИ ГЕРОЕВ --- */
+        .heroes-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 15px; }
+        .hero-card {
+            background: var(--panel-bg); border: 1px solid rgba(0, 136, 204, 0.4); border-radius: 14px;
+            padding: 12px; text-align: center; display: flex; flex-direction: column; align-items: center;
+            justify-content: space-between; position: relative; box-shadow: 0 0 15px rgba(0, 136, 204, 0.15);
+        }
+        .hero-card.fire { border-color: var(--fire-color); background: linear-gradient(135deg, rgba(255, 85, 0, 0.15), rgba(13, 19, 41, 0.9)); box-shadow: 0 0 20px rgba(255, 85, 0, 0.25); }
+        .hero-card.water { border-color: var(--water-color); background: linear-gradient(135deg, rgba(0, 136, 255, 0.15), rgba(13, 19, 41, 0.9)); box-shadow: 0 0 20px rgba(0, 136, 255, 0.25); }
+        .hero-avatar-frame {
+            width: 75px; height: 75px; border-radius: 50%; background: rgba(0,0,0,0.6); border: 3px solid #fff;
+            display: flex; justify-content: center; align-items: center; font-size: 2.5rem; margin-bottom: 8px;
+            position: relative; overflow: hidden; box-shadow: 0 0 15px rgba(255,255,255,0.3);
+        }
+        .hero-card h4 { font-size: 0.95rem; color: #fff; margin-bottom: 2px; }
+        .hero-element { font-size: 0.7rem; color: #00e5ff; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+        .hero-card.fire .hero-element { color: #ff8844; }
+        .hero-card.water .hero-element { color: #44bbff; }
+        .hero-stats { font-size: 0.75rem; color: #ccc; margin-bottom: 10px; }
+
+        .shop-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 15px; }
+        .shop-card {
+            background: var(--panel-bg); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px;
+            padding: 12px 8px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+        }
+        .shop-card.premium { border: 1px solid var(--accent-gold); background: rgba(40, 30, 0, 0.7); box-shadow: 0 0 15px rgba(255, 215, 0, 0.15); }
+        .shop-icon { font-size: 2.2rem; margin-bottom: 8px; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.3)); }
+        .shop-card h4 { font-size: 0.9rem; margin-bottom: 3px; color: #fff; }
+        .shop-card p { font-size: 0.7rem; color: #aaa; margin-bottom: 10px; line-height: 1.2; }
+        
+        .btn-buy {
+            background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff;
+            padding: 8px; border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer; touch-action: manipulation; font-size: 0.85rem;
+        }
+        .btn-buy:active { transform: scale(0.95); }
+        .btn-ton { 
+            background: linear-gradient(135deg, #0088cc 0%, #0055aa 100%); border: none; box-shadow: 0 0 10px rgba(0, 136, 204, 0.4); 
+            color: white; padding: 10px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%;
+            transition: transform 0.2s, background 0.3s; touch-action: manipulation;
+        }
+        .btn-ton:active { transform: scale(0.95); }
+
+        .quest-card {
+            background: var(--panel-bg); border: 1px solid rgba(0, 136, 204, 0.3); border-radius: 12px;
+            padding: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;
+        }
+        .quest-card.premium { border-color: var(--accent-gold); background: rgba(40, 30, 0, 0.6); }
+        .quest-info { flex-grow: 1; padding-right: 10px; }
+        .quest-info h4 { font-size: 0.95rem; color: #fff; margin-bottom: 3px; }
+        .quest-info p { font-size: 0.7rem; color: #aaa; margin-bottom: 4px; }
+        .quest-reward { font-weight: bold; color: var(--accent-gold); font-size: 0.85rem; display: flex; align-items: center; gap: 4px; }
+        .btn-quest {
+            background: linear-gradient(135deg, #00d2ff 0%, #0066ff 100%); color: white; border: none; padding: 8px 12px;
+            border-radius: 10px; font-weight: bold; font-size: 0.8rem; cursor: pointer; box-shadow: 0 0 10px rgba(0, 136, 204, 0.4);
+            transition: transform 0.2s, background 0.3s; min-width: 90px; touch-action: manipulation;
+        }
+        .btn-quest:active { transform: scale(0.95); }
+        .btn-quest.disabled { background: #333; color: #888; box-shadow: none; cursor: not-allowed; border: 1px solid #555; }
+        
+        .profile-container { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 15px; }
+        .profile-avatar-large {
+            width: 90px; height: 90px; background: #0088cc; border-radius: 50%; border: 4px solid var(--accent-gold);
+            display: flex; justify-content: center; align-items: center; font-size: 2.8rem; box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+        }
+        .profile-name { font-size: 1.4rem; font-weight: bold; color: #fff; }
+        .avatar-selection-grid { display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; }
+        .avatar-option {
+            width: 40px; height: 40px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex;
+            justify-content: center; align-items: center; font-size: 1.3rem; cursor: pointer; border: 2px solid transparent;
+            transition: all 0.2s; touch-action: manipulation;
+        }
+        .avatar-option:hover, .avatar-option.active { background: rgba(0, 136, 204, 0.3); border-color: #0088cc; transform: scale(1.1); }
+        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: 100%; margin-bottom: 20px; }
+        .stat-box { background: var(--panel-bg); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px; text-align: center; }
+        .stat-box span { display: block; color: #aaa; font-size: 0.75rem; margin-bottom: 3px; }
+        .stat-box b { font-size: 1.2rem; color: #00e5ff; }
+        .wallet-section { background: rgba(0, 136, 204, 0.1); border: 1px solid rgba(0, 136, 204, 0.3); border-radius: 12px; padding: 15px; text-align: center; width: 100%; }
+        .wallet-section p { color: #aaa; font-size: 0.8rem; margin-bottom: 12px; }
+
+        /* МОДАЛЬНОЕ ОКНО */
+        #game-over-modal {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.85); display: flex; justify-content: center; align-items: center;
+            z-index: 2000; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.3s ease;
+        }
+        #game-over-modal.active { opacity: 1; visibility: visible; pointer-events: auto; backdrop-filter: blur(5px); }
+        .modal-content {
+            background: var(--panel-bg); border: 2px solid var(--border-glow); border-radius: 16px;
+            padding: 25px 20px; text-align: center; width: 85%; box-shadow: 0 0 40px rgba(0, 136, 204, 0.6);
+            transform: scale(0.8); transition: transform 0.3s ease;
+        }
+        #game-over-modal.active .modal-content { transform: scale(1); }
+        .modal-content h2 { color: #fff; margin-bottom: 5px; font-size: 1.6rem; }
+        .modal-content p { color: #aaa; font-size: 0.95rem; margin-bottom: 20px; }
+        .final-score { display: block; color: var(--accent-gold); font-size: 2.2rem; font-weight: 900; text-shadow: 0 0 15px rgba(255, 215, 0, 0.5); margin-top: 5px; }
+        .btn-modal { width: 100%; padding: 14px; margin-bottom: 10px; border-radius: 12px; border: none; font-size: 0.95rem; font-weight: bold; cursor: pointer; text-transform: uppercase; touch-action: manipulation; }
+        .btn-watch-ad { background: linear-gradient(135deg, #00d2ff 0%, #0066ff 100%); color: white; box-shadow: 0 0 15px rgba(0, 136, 204, 0.5); }
+        .btn-end-game { background: rgba(255, 255, 255, 0.1); color: #ccc; border: 1px solid rgba(255, 255, 255, 0.2); }
+
+        .tile-blue { background: radial-gradient(circle, #00d2ff, #0066ff); }
+        .tile-yellow { background: radial-gradient(circle, #ffeb3b, #f57f17); }
+        .tile-purple { background: radial-gradient(circle, #ea80fc, #aa00ff); }
+        .tile-green { background: radial-gradient(circle, #b9f6ca, #00c853); }
+        .tile-red { background: radial-gradient(circle, #ff8a80, #d50000); }
+
+        /* Версия сборки */
+        #version-display {
+            position: fixed; bottom: 5px; width: 100%; text-align: center; color: rgba(255, 255, 255, 0.3);
+            font-size: 10px; pointer-events: none; z-index: 1000;
+        }
     </style>
 </head>
 <body>
 
 <div id="game-container">
-    <!-- Меню -->
-    <div id="menu-screen" class="screen active">
-        <h1>TON SAGA</h1>
-        <button class="btn-play" onclick="switchScreen('story-screen')">СЮЖЕТНАЯ МИССИЯ</button>
+
+    <div id="loading-screen" class="screen active">
+        <div class="loading-logo">💎</div>
+        <div class="loading-title">TON SAGA</div>
+        <div class="loading-bar-container">
+            <div class="loading-bar-fill" id="loading-fill"></div>
+        </div>
+        <div class="loading-text">Инициализация <span id="loading-percentage">0%</span></div>
+        <div class="loading-status" id="loading-status-text">Соединение с Telegram...</div>
+    </div>
+
+    <div id="menu-screen" class="screen">
+        <div class="header">
+            <div class="profile" onclick="openProfile()" ontouchstart="openProfile()">
+                <div class="avatar" id="user-avatar">🚀</div>
+                <div>
+                    <div style="font-weight: bold; font-size: 0.9rem;" id="user-name">Space Explorer</div>
+                    <div style="font-size: 0.75rem; color: #00e5ff;">Уровень 24</div>
+                </div>
+            </div>
+            <div class="stats-block">
+                <div class="stat-badge">💎 <span id="menu-gems">12,450</span></div>
+                <div class="stat-badge" style="color: #0088cc;">💠 0.5</div>
+            </div>
+        </div>
+
+        <div class="game-title">
+            <h1>TON SAGA</h1>
+            <p>КОСМИЧЕСКИЙ ДЕСАНТ</p>
+        </div>
+
+        <button class="btn-play" style="margin: 15px 0;" onclick="openStory()" ontouchstart="openStory()">СЮЖЕТНАЯ МИССИЯ</button>
+
         <div class="menu-grid">
-            <div class="menu-card" onclick="openHeroes()"><h3>ГЕРОИ</h3></div>
-            <div class="menu-card" onclick="openShop()"><h3>МАГАЗИН</h3></div>
-            <div class="menu-card" onclick="openProfile()"><h3>ПРОФИЛЬ</h3></div>
+            <div class="menu-card" onclick="openHeroes()" ontouchstart="openHeroes()">
+                <h3>ГЕРОИ</h3><p>Отряд</p>
+            </div>
+            <div class="menu-card" onclick="openShop()" ontouchstart="openShop()">
+                <h3>МАГАЗИН</h3><p>Арсенал</p>
+            </div>
+            <div class="menu-card" onclick="openQuests()" ontouchstart="openQuests()">
+                <h3>ЗАДАНИЯ</h3><p>Награды</p>
+            </div>
+            <div class="menu-card" style="grid-column: 1 / 4;" onclick="openProfile()" ontouchstart="openProfile()">
+                <h3>ПРОФИЛЬ И КОШЕЛЕК</h3><p>Статистика и TON</p>
+            </div>
         </div>
     </div>
 
-    <!-- Сюжет -->
+    <!-- НОВЫЙ ЭКРАН СЮЖЕТА -->
     <div id="story-screen" class="screen">
+        <div class="game-header">
+            <div class="stats-block"><div class="stat-badge">СЮЖЕТНАЯ КАМПАНИЯ</div></div>
+            <button class="btn-back" onclick="backToMenu()" ontouchstart="backToMenu()">✕</button>
+        </div>
         <h2 class="screen-title">ВЫБОР МИССИИ</h2>
-        <div class="mission-card" onclick="startGame()"><h3>Сектор: Туманность</h3><p>Уровень 1</p></div>
-        <button class="btn-back" onclick="switchScreen('menu-screen')">✕</button>
-    </div>
-
-    <!-- Битва -->
-    <div id="game-screen" class="screen">
-        <div class="game-header"><button class="btn-back" onclick="backToMenu()">✕</button></div>
-        <div id="board-container"></div>
-        <div class="hero-abilities-panel">
-            <div class="hero-slot"><img src="images/blue_trooper.png" class="hero-img" onclick="useHeroSkill('blue')"><div class="mana-bar"><div class="mana-fill" id="mana-blue"></div></div></div>
-            <div class="hero-slot"><img src="images/green_insectoid.png" class="hero-img" onclick="useHeroSkill('green')"><div class="mana-bar"><div class="mana-fill" id="mana-green"></div></div></div>
-            <div class="hero-slot"><img src="images/purple_mystic.png" class="hero-img" onclick="useHeroSkill('purple')"><div class="mana-bar"><div class="mana-fill" id="mana-purple"></div></div></div>
-            <div class="hero-slot"><img src="images/red_assault.png" class="hero-img" onclick="useHeroSkill('red')"><div class="mana-bar"><div class="mana-fill" id="mana-red"></div></div></div>
+        
+        <div class="quest-card premium" onclick="startGame()">
+            <div class="quest-info">
+                <h4 style="color: var(--accent-gold); font-size: 1.1rem;">Миссия 1: Планета X</h4>
+                <p>Зачистка сектора от инсектоидов</p>
+            </div>
+            <button class="btn-quest" style="min-width: auto; padding: 10px 15px;">В БОЙ</button>
+        </div>
+        
+        <div class="quest-card" style="opacity: 0.5;">
+            <div class="quest-info">
+                <h4>Миссия 2: Астероидный пояс</h4>
+                <p>Откроется после прохождения Миссии 1</p>
+            </div>
+            <button class="btn-quest disabled">Закрыто</button>
         </div>
     </div>
+
+    <!-- ЭКРАН 2: БИТВА С БОССОМ И ГЕРОЯМИ -->
+    <div id="game-screen" class="screen">
+        <div class="game-header">
+            <div class="stats-block">
+                <div class="stat-badge">Счет: <span id="score-val" style="font-weight: bold; color: var(--accent-gold);">0</span></div>
+                <div class="stat-badge">Ходы: <span id="moves-val" style="font-weight: bold;">20</span></div>
+            </div>
+            <button class="btn-back" onclick="backToMenu()" ontouchstart="backToMenu()">✕</button>
+        </div>
+
+        <div class="boss-battle-panel">
+            <div class="boss-info-row">
+                <span style="color: #ff9933;">👹 КРИПТО-ДРАКОН (БОСС)</span>
+                <span>HP: <span id="boss-hp-text">500</span> / 500</span>
+            </div>
+            <div class="boss-hp-bar-container">
+                <div class="boss-hp-bar-fill" id="boss-hp-bar"></div>
+            </div>
+        </div>
+
+        <div id="board-container"></div>
+        
+        <div class="booster-panel">
+            <div class="booster-btn" id="btn-boost-shuffle" onclick="useBooster('shuffle')">
+                <div class="booster-count" id="count-shuffle">1</div><div class="booster-icon">🔄</div>
+            </div>
+            <div class="booster-btn" id="btn-boost-rocket" onclick="useBooster('rocket')">
+                <div class="booster-count" id="count-rocket">1</div><div class="booster-icon">🚀</div>
+            </div>
+            <div class="booster-btn" id="btn-boost-bomb" onclick="useBooster('bomb')">
+                <div class="booster-count" id="count-bomb">1</div><div class="booster-icon">💣</div>
+            </div>
+        </div>
+
+        <div id="game-hints" style="text-align: center; color: #aaa; font-size: 0.75rem; padding: 2px 0;">
+            Собирай комбинации и заряжай ману героев стихиями!
+        </div>
+
+        <!-- НОВАЯ ПАНЕЛЬ ГЕРОЕВ -->
+        <div class="hero-abilities-panel">
+            <div class="hero-slot">
+                <img src="images/blue_trooper.png" id="hero-img-blue" class="hero-img" onclick="useHeroSkill('blue')">
+                <div class="mana-bar"><div class="mana-fill blue" id="mana-blue"></div></div>
+            </div>
+            <div class="hero-slot">
+                <img src="images/green_insectoid.png" id="hero-img-green" class="hero-img" onclick="useHeroSkill('green')">
+                <div class="mana-bar"><div class="mana-fill green" id="mana-green"></div></div>
+            </div>
+            <div class="hero-slot">
+                <img src="images/purple_mystic.png" id="hero-img-purple" class="hero-img" onclick="useHeroSkill('purple')">
+                <div class="mana-bar"><div class="mana-fill purple" id="mana-purple"></div></div>
+            </div>
+            <div class="hero-slot">
+                <img src="images/red_assault.png" id="hero-img-red" class="hero-img" onclick="useHeroSkill('red')">
+                <div class="mana-bar"><div class="mana-fill red" id="mana-red"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ОСТАЛЬНЫЕ ЭКРАНЫ -->
+    <div id="heroes-screen" class="screen">
+        <div class="game-header">
+            <div class="stats-block"><div class="stat-badge">💎 <span id="heroes-gems-display">12,450</span></div></div>
+            <button class="btn-back" onclick="backToMenu()" ontouchstart="backToMenu()">✕</button>
+        </div>
+        <h2 class="screen-title">ОТРЯД ГЕРОЕВ</h2>
+        <p style="text-align: center; color: #aaa; font-size: 0.8rem; margin-bottom: 15px;">Прокачивай героев для усиления навыков</p>
+        <div class="heroes-grid">
+            <div class="hero-card fire">
+                <div class="hero-avatar-frame">🔥</div><h4>Штурмовик</h4>
+                <div class="hero-element">Стихия: Огонь</div><div class="hero-stats">Урон: 150 / Ур. 3</div>
+                <button class="btn-buy" onclick="upgradeHero('fire', 500)">Улучшить 💎500</button>
+            </div>
+            <div class="hero-card water">
+                <div class="hero-avatar-frame">💧</div><h4>Десантник</h4>
+                <div class="hero-element">Стихия: Вода</div><div class="hero-stats">Урон: 80 / Ур. 2</div>
+                <button class="btn-buy" onclick="upgradeHero('water', 500)">Улучшить 💎500</button>
+            </div>
+            <div class="hero-card" style="border-color: #aa00ff; background: linear-gradient(135deg, rgba(170,0,255,0.15), rgba(13,19,41,0.9));">
+                <div class="hero-avatar-frame">🔮</div><h4>Мистик</h4>
+                <div class="hero-element" style="color: #ea80fc;">Стихия: Эфир</div><div class="hero-stats">Урон: 100 / Ур. 4</div>
+                <button class="btn-buy" onclick="upgradeHero('ether', 800)">Улучшить 💎800</button>
+            </div>
+            <div class="hero-card" style="border-color: #00c853; background: linear-gradient(135deg, rgba(0,200,83,0.15), rgba(13,19,41,0.9));">
+                <div class="hero-avatar-frame">🟢</div><h4>Инсектоид</h4>
+                <div class="hero-element" style="color: #00c853;">Стихия: Яд</div><div class="hero-stats">Урон: 60 / Ур. 1</div>
+                <button class="btn-buy" onclick="upgradeHero('poison', 2000)">Улучшить 💎2000</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="shop-screen" class="screen">
+        <div class="game-header">
+            <div class="stats-block">
+                <div class="stat-badge">💎 <span id="shop-gems-display">12,450</span></div>
+                <div class="stat-badge" style="color: #0088cc;">💠 0.5</div>
+            </div>
+            <button class="btn-back" onclick="backToMenu()" ontouchstart="backToMenu()">✕</button>
+        </div>
+        <h2 class="screen-title">АРСЕНАЛ</h2>
+        <h3 class="category-title">⚡ БАЗОВЫЕ БУСТЕРЫ</h3>
+        <div class="shop-grid">
+            <div class="shop-card">
+                <div class="shop-icon">🔄</div><h4>Перемешивание</h4><p>Меняет все фишки</p>
+                <button class="btn-buy" onclick="buyItem('shuffle', '500 очков')">💎 500</button>
+            </div>
+            <div class="shop-card">
+                <div class="shop-icon">➕</div><h4>+3 Хода</h4><p>Дает шанс доиграть</p>
+                <button class="btn-buy" onclick="buyItem('moves', '800 очков')">💎 800</button>
+            </div>
+        </div>
+        <h3 class="category-title premium-text">💎 ПРЕМИУМ (За TON)</h3>
+        <div class="shop-grid">
+            <div class="shop-card premium">
+                <div class="shop-icon">🧪</div><h4>Тест 0.001 TON</h4><p>Проверка платежа</p>
+                <button class="btn-buy btn-ton" onclick="buyItem('test_001', '0.001 TON')">0.001 TON</button>
+            </div>
+            <div class="shop-card premium">
+                <div class="shop-icon">🚀</div><h4>Ракетный удар</h4><p>Уничтожает ряд</p>
+                <button class="btn-buy btn-ton" onclick="buyItem('rocket', '0.1 TON')">0.1 TON</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="quests-screen" class="screen">
+        <div class="game-header">
+            <div class="stats-block"><div class="stat-badge">💎 <span id="quests-gems-display">12,450</span></div></div>
+            <button class="btn-back" onclick="backToMenu()" ontouchstart="backToMenu()">✕</button>
+        </div>
+        <h2 class="screen-title">ЗАДАНИЯ</h2>
+        <h3 class="category-title">📅 СУТОЧНЫЕ ЗАДАНИЯ</h3>
+        <div class="quest-card">
+            <div class="quest-info"><h4>Сыграть 3 битвы</h4><p>Прогресс: 1/3</p><div class="quest-reward">💎 300</div></div>
+            <button class="btn-quest disabled" onclick="alert('Квест еще не выполнен!')">В процессе</button>
+        </div>
+        <div class="quest-card">
+            <div class="quest-info"><h4>Нанести 1000 урона</h4><p>Прогресс: 1500/1000</p><div class="quest-reward">💎 500</div></div>
+            <button class="btn-quest" onclick="claimQuestReward(this, 500)">Забрать</button>
+        </div>
+        <h3 class="category-title premium-text" style="margin-top: 15px;">📢 СПОНСОРСКИЕ</h3>
+        <div class="quest-card premium">
+            <div class="quest-info"><h4>Подписка на TON Daily</h4><p>Новости сети</p><div class="quest-reward">💎 2000</div></div>
+            <button class="btn-quest" onclick="verifySubscription(this, 'TON Daily', 2000)">Подписка</button>
+        </div>
+    </div>
+    
+    <div id="profile-screen" class="screen">
+        <div class="game-header">
+            <div class="stats-block"><div class="stat-badge">Уровень: <span style="font-weight: bold; color: var(--accent-gold);">24</span></div></div>
+            <button class="btn-back" onclick="backToMenu()" ontouchstart="backToMenu()">✕</button>
+        </div>
+        <h2 class="screen-title">ПРОФИЛЬ</h2>
+        <div class="profile-container">
+            <div class="profile-avatar-large" id="profile-avatar-large">🚀</div>
+            <div class="profile-name" id="profile-name-large">Space Explorer</div>
+        </div>
+        <h3 class="category-title" style="justify-content: center;">Выбор аватара</h3>
+        <div class="avatar-selection-grid">
+            <div class="avatar-option active" onclick="changeAvatar(this, '🚀')">🚀</div>
+            <div class="avatar-option" onclick="changeAvatar(this, '👽')">👽</div>
+            <div class="avatar-option" onclick="changeAvatar(this, '🤖')">🤖</div>
+            <div class="avatar-option" onclick="changeAvatar(this, '👨‍🚀')">👨‍🚀</div>
+        </div>
+        <h3 class="category-title">Статистика</h3>
+        <div class="stats-grid">
+            <div class="stat-box"><span>Побед</span><b id="stat-best-score">0</b></div>
+            <div class="stat-box"><span>Сыграно</span><b id="stat-games-played">0</b></div>
+            <div class="stat-box"><span>Квестов</span><b id="stat-quests-done">0</b></div>
+            <div class="stat-box"><span>Ранг</span><b style="color: var(--accent-gold);">Герой TON</b></div>
+        </div>
+        <div class="wallet-section">
+            <p>Привяжите кошелек для получения наград с боссов и вывода TON</p>
+            <button id="btn-wallet-connect" class="btn-ton">💎 ПРИВЯЗАТЬ TON КОШЕЛЕК</button>
+        </div>
+    </div>
+
+    <div id="game-over-modal">
+        <div class="modal-content">
+            <h2 id="modal-title-text">ИТОГ БИТВЫ</h2>
+            <p id="modal-desc-text">Нанесено урона: <span class="final-score" id="final-score-display">0</span></p>
+            <button class="btn-modal btn-watch-ad" onclick="watchAdForMoves()" ontouchstart="watchAdForMoves()">📺 РЕКЛАМА (+5 ХОДОВ)</button>
+            <button class="btn-modal btn-end-game" onclick="endGameAndReturn()" ontouchstart="endGameAndReturn()">В главное меню</button>
+        </div>
+    </div>
+
 </div>
 
-<script>
-    // --- Твой функционал ---
-    const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({ manifestUrl: 'https://leshkasonin20-alt.github.io/TON_Saga/tonconnect-manifest.json' });
-    let heroMana = { blue: 0, green: 0, purple: 0, red: 0 };
+<div id="version-display">Версия: 1.0015</div>
 
-    function switchScreen(id) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
+<script>
+    // --- Симуляция экрана загрузки при старте ---
+    document.addEventListener("DOMContentLoaded", () => {
+        loadUserProgress();
+        simulateLoading();
+    });
+
+    function simulateLoading() {
+        let progress = 0;
+        const fill = document.getElementById('loading-fill');
+        const textPercent = document.getElementById('loading-percentage');
+        const statusText = document.getElementById('loading-status-text');
+        
+        const loadingTexts = ["Соединение с Telegram...", "Проверка TON кошелька...", "Призыв космического десанта...", "Обнаружение босса...", "Готово!"];
+
+        const interval = setInterval(() => {
+            progress += Math.floor(Math.random() * 12) + 3;
+            if(progress > 20 && progress <= 40) statusText.innerText = loadingTexts[1];
+            else if(progress > 40 && progress <= 70) statusText.innerText = loadingTexts[2];
+            else if(progress > 70 && progress < 99) statusText.innerText = loadingTexts[3];
+
+            if (progress >= 100) {
+                progress = 100; clearInterval(interval); fill.style.width = '100%'; textPercent.innerText = '100%'; statusText.innerText = loadingTexts[4];
+                setTimeout(() => {
+                    const loadingScreen = document.getElementById('loading-screen');
+                    loadingScreen.style.opacity = '0';
+                    setTimeout(() => { loadingScreen.classList.remove('active'); document.getElementById('menu-screen').classList.add('active'); }, 400); 
+                }, 400);
+            } else { fill.style.width = progress + '%'; textPercent.innerText = progress + '%'; }
+        }, 50);
     }
 
-    function useHeroSkill(color) {
-        if (heroMana[color] >= 100) {
-            alert(color.toUpperCase() + " АТАКА!");
-            heroMana[color] = 0;
-            updateManaUI();
+    // --- Инициализация TG ---
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+        tg.ready(); tg.expand();
+        if (tg.initDataUnsafe?.user) {
+            document.getElementById('user-name').innerText = tg.initDataUnsafe.user.first_name;
+            document.getElementById('profile-name-large').innerText = tg.initDataUnsafe.user.first_name;
+            document.getElementById('user-avatar').innerText = tg.initDataUnsafe.user.first_name[0].toUpperCase();
+            document.getElementById('profile-avatar-large').innerText = tg.initDataUnsafe.user.first_name[0].toUpperCase();
         }
     }
 
+    const AdController = window.Adsgram ? window.Adsgram.init({ blockId: "1234" }) : null;
+
+    // --- Глобальные переменные и Босс ---
+    const BOARD_SIZE = 8;
+    const TILE_TYPES = ['blue', 'yellow', 'purple', 'green', 'red'];
+    const TILE_ICONS = { 'blue': '💎', 'yellow': '🪙', 'purple': '🔮', 'green': '🟢', 'red': '🔥' };
+    let board = [];
+    let score = 0;
+    let moves = 20;
+    let selectedTile = null;
+    let isProcessing = false;
+    
+    const BOSS_MAX_HP = 500;
+    let bossHp = BOSS_MAX_HP;
+    
+    let totalGems = 12450; 
+    let bestScore = 0;
+    let gamesPlayed = 0;
+    let questsCompleted = 0;
+    let inventory = { shuffle: 2, rocket: 2, bomb: 2 }; 
+    let activeBooster = null; 
+
+    // --- ЛОГИКА МАНЫ И ГЕРОЕВ ---
+    let heroMana = { blue: 0, green: 0, purple: 0, red: 0 };
+    
     function updateManaUI() {
-        for(let color in heroMana) document.getElementById('mana-'+color).style.width = heroMana[color] + '%';
+        ['blue', 'green', 'purple', 'red'].forEach(color => {
+            const fill = document.getElementById(`mana-${color}`);
+            const img = document.getElementById(`hero-img-${color}`);
+            if (fill && img) {
+                fill.style.width = `${heroMana[color]}%`;
+                if (heroMana[color] >= 100) img.classList.add('ready');
+                else img.classList.remove('ready');
+            }
+        });
     }
 
-    function startGame() {
-        switchScreen('game-screen');
-        // Тут твой initBoard()
+    function useHeroSkill(color) {
+        if (isProcessing || moves <= 0 || bossHp <= 0) return;
+        
+        if (heroMana[color] >= 100) {
+            heroMana[color] = 0;
+            updateManaUI();
+            
+            let damage = 50;
+            let skillName = "";
+            if (color === 'blue') { damage = 80; skillName = "ПЛАЗМЕННЫЙ ВЫСТРЕЛ"; }
+            if (color === 'green') { damage = 60; skillName = "КИСЛОТНЫЙ ПЛЕВОК"; }
+            if (color === 'purple') { damage = 100; skillName = "МИСТИЧЕСКИЙ РАЗЛОМ"; }
+            if (color === 'red') { damage = 150; skillName = "РАКЕТНЫЙ ЗАЛП"; }
+            
+            bossHp = Math.max(0, bossHp - damage);
+            score += damage;
+            document.getElementById('score-val').innerText = score;
+            updateBossUI();
+            
+            const hintsDisplay = document.getElementById('game-hints');
+            hintsDisplay.innerText = `🔥 Навык: ${skillName}! Нанесено ${damage} урона`;
+            hintsDisplay.style.color = "var(--boss-red)";
+            setTimeout(() => {
+                hintsDisplay.innerText = "Собирай комбинации и заряжай ману героев стихиями!";
+                hintsDisplay.style.color = "#aaa";
+            }, 2500);
+            
+            if (bossHp <= 0) showGameOver(true);
+        } else {
+            const hintsDisplay = document.getElementById('game-hints');
+            hintsDisplay.innerText = "Маны недостаточно! Собери больше фишек этого цвета.";
+            hintsDisplay.style.color = "#ff3333";
+            setTimeout(() => {
+                hintsDisplay.innerText = "Собирай комбинации и заряжай ману героев стихиями!";
+                hintsDisplay.style.color = "#aaa";
+            }, 2000);
+        }
+    }
+
+    // --- Сохранение ---
+    function loadUserProgress() {
+        const savedData = localStorage.getItem('tonSagaProgress');
+        if (savedData) {
+            const data = JSON.parse(savedData);
+            totalGems = data.totalGems !== undefined ? data.totalGems : 12450;
+            bestScore = data.bestScore !== undefined ? data.bestScore : 0;
+            gamesPlayed = data.gamesPlayed !== undefined ? data.gamesPlayed : 0;
+            questsCompleted = data.questsCompleted !== undefined ? data.questsCompleted : 0;
+            if (data.inventory) inventory = data.inventory;
+        }
+        updateAllBalances();
+    }
+
+    function saveUserProgress() {
+        localStorage.setItem('tonSagaProgress', JSON.stringify({totalGems: totalGems, bestScore: bestScore, gamesPlayed: gamesPlayed, questsCompleted: questsCompleted, inventory: inventory}));
+    }
+
+    const boardContainer = document.getElementById('board-container');
+    const gameOverModal = document.getElementById('game-over-modal');
+
+    // --- TonConnect ---
+    const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({ manifestUrl: 'https://leshkasonin20-alt.github.io/TON_Saga/tonconnect-manifest.json' });
+
+    tonConnectUI.onStatusChange(wallet => {
+        const btn = document.getElementById('btn-wallet-connect');
+        if (wallet) {
+            const shortAddress = `${wallet.account.address.slice(0, 4)}...${wallet.account.address.slice(-4)}`;
+            btn.innerText = `✅ ПОДКЛЮЧЕН (${shortAddress})`; btn.style.background = "linear-gradient(135deg, #00c853 0%, #b9f6ca 100%)"; btn.style.color = "#000"; btn.onclick = () => tonConnectUI.disconnect();
+        } else {
+            btn.innerText = "💎 ПРИВЯЗАТЬ TON КОШЕЛЕК"; btn.style.background = "linear-gradient(135deg, #0088cc 0%, #0055aa 100%)"; btn.style.color = "white"; btn.onclick = connectWallet;
+        }
+    });
+
+    async function connectWallet() { try { await tonConnectUI.openModal(); } catch (error) { console.error(error); } }
+    document.getElementById('btn-wallet-connect').onclick = connectWallet;
+
+    // --- Навигация ---
+    function switchScreen(screenId) {
+        document.querySelectorAll('.screen').forEach(s => { s.classList.remove('active'); s.style.visibility = 'hidden'; });
+        const target = document.getElementById(screenId);
+        if (target) { target.classList.add('active'); target.style.visibility = 'visible'; }
+    }
+
+    function backToMenu() { switchScreen('menu-screen'); gameOverModal.classList.remove('active'); activeBooster = null; updateAllBalances(); }
+    function openStory() { switchScreen('story-screen'); }
+    function openShop() { switchScreen('shop-screen'); updateAllBalances(); }
+    function openQuests() { switchScreen('quests-screen'); updateAllBalances(); }
+    function openHeroes() { switchScreen('heroes-screen'); updateAllBalances(); }
+    function openProfile() { switchScreen('profile-screen'); document.getElementById('stat-best-score').innerText = bestScore; document.getElementById('stat-games-played').innerText = gamesPlayed; document.getElementById('stat-quests-done').innerText = questsCompleted; }
+
+    function updateAllBalances() {
+        document.getElementById('menu-gems').innerText = totalGems; document.getElementById('shop-gems-display').innerText = totalGems; document.getElementById('quests-gems-display').innerText = totalGems;
+        const hgd = document.getElementById('heroes-gems-display'); if (hgd) hgd.innerText = totalGems;
+    }
+
+    function changeAvatar(element, emoji) {
+        document.querySelectorAll('.avatar-option').forEach(el => el.classList.remove('active')); element.classList.add('active');
+        document.getElementById('profile-avatar-large').innerText = emoji; document.getElementById('user-avatar').innerText = emoji;
+    }
+
+    function upgradeHero(heroType, cost) {
+        if (totalGems >= cost) { totalGems -= cost; updateAllBalances(); saveUserProgress(); alert(`🔥 Герой успешно прокачан!`); } else { alert("Недостаточно кристалов!"); }
     }
     
-    // В методе handleMatches добавь начисление маны:
-    // heroMana[type] = Math.min(100, heroMana[type] + 5);
-    // updateManaUI();
+    async function buyItem(itemId, priceStr) {
+        if(priceStr.includes('TON')) {
+            if (!tonConnectUI.connected) { alert("Подключите TON кошелек!"); return; }
+            try {
+                alert("Ожидание подтверждения транзакции в кошельке...");
+                await tonConnectUI.sendTransaction({ validUntil: Math.floor(Date.now() / 1000) + 60, messages: [{ address: "UQBtw53L3elHBThWfK8clnomVSLmpFtXZ6kjsOOavPl9_VaT", amount: Math.floor(parseFloat(priceStr) * 1000000000).toString() }] });
+                if (itemId === 'test_001') alert("Тестовый платеж отправлен!"); else if (itemId === 'rocket' || itemId === 'bomb') { inventory[itemId] += 3; saveUserProgress(); alert(`Начислено 3 шт: ${itemId}`); } else alert("Успешная покупка!");
+            } catch (error) { alert("Транзакция отменена."); }
+        } else {
+            const cost = parseInt(priceStr.replace(/[^0-9]/g, ''));
+            if(totalGems >= cost) { totalGems -= cost; if (itemId === 'shuffle') inventory.shuffle++; if (itemId === 'moves') moves += 3; updateAllBalances(); saveUserProgress(); alert(`Успешно куплено!`); } else alert("Недостаточно очков!");
+        }
+    }
+
+    function claimQuestReward(btnElement, amount) { totalGems += amount; questsCompleted++; updateAllBalances(); saveUserProgress(); btnElement.innerText = "Забрано"; btnElement.classList.add('disabled'); btnElement.onclick = null; }
+    function verifySubscription(btnElement, channelName, amount) {
+        if (btnElement.innerText === "Подписка") { alert(`Открываем канал "${channelName}"...`); btnElement.innerText = "Проверить"; } 
+        else if (btnElement.innerText === "Проверить") { btnElement.innerText = "Ожидание..."; setTimeout(() => { alert(`Вы получили 💎 ${amount}`); claimQuestReward(btnElement, amount); btnElement.innerText = "Выполнено"; }, 1000); }
+    }
+
+    // --- Логика Битвы ---
+    function startGame() {
+        switchScreen('game-screen'); gameOverModal.classList.remove('active');
+        score = 0; moves = 20; bossHp = BOSS_MAX_HP; activeBooster = null;
+        heroMana = { blue: 0, green: 0, purple: 0, red: 0 }; updateManaUI();
+        updateBossUI(); document.getElementById('score-val').innerText = score; document.getElementById('moves-val').innerText = moves;
+        updateBoosterUI(); initBoard();
+    }
+
+    function updateBossUI() {
+        document.getElementById('boss-hp-text').innerText = Math.max(0, bossHp);
+        document.getElementById('boss-hp-bar').style.width = `${Math.max(0, (bossHp / BOSS_MAX_HP) * 100)}%`;
+    }
+
+    function showGameOver(isWin = false) {
+        const titleEl = document.getElementById('modal-title-text'); const descEl = document.getElementById('modal-desc-text');
+        if (isWin) { titleEl.innerText = "ПОБЕДА! 🎉"; descEl.innerHTML = `Босс повержен!<br>Урон: <span class="final-score">${score}</span>`; bestScore++; } 
+        else { titleEl.innerText = "ПОРАЖЕНИЕ 💀"; descEl.innerHTML = `Ходы кончились.<br>Урон: <span class="final-score">${score}</span>`; }
+        gameOverModal.classList.add('active');
+    }
+
+    function endGameAndReturn() { gamesPlayed++; saveUserProgress(); gameOverModal.classList.remove('active'); backToMenu(); }
+    function watchAdForMoves() {
+        if (AdController) { AdController.show().then(() => { moves += 5; document.getElementById('moves-val').innerText = moves; gameOverModal.classList.remove('active'); }).catch(() => alert("Реклама закрыта рано.")); } 
+        else { moves += 5; document.getElementById('moves-val').innerText = moves; gameOverModal.classList.remove('active'); }
+    }
+
+    function updateBoosterUI() {
+        document.getElementById('count-shuffle').innerText = inventory.shuffle; document.getElementById('count-rocket').innerText = inventory.rocket; document.getElementById('count-bomb').innerText = inventory.bomb;
+        document.querySelectorAll('.booster-btn').forEach(btn => btn.classList.remove('active'));
+        if (activeBooster) document.getElementById(`btn-boost-${activeBooster}`).classList.add('active');
+    }
+
+    function useBooster(type) {
+        if (isProcessing || moves <= 0) return;
+        if (inventory[type] <= 0) { alert("Нет бустеров!"); return; }
+        if (type === 'shuffle') { inventory.shuffle--; updateBoosterUI(); saveUserProgress(); shuffleBoard(); return; }
+        if (activeBooster === type) { activeBooster = null; updateBoosterUI(); return; }
+        activeBooster = type; if(selectedTile) { selectedTile.element.classList.remove('selected'); selectedTile = null; } updateBoosterUI();
+    }
+
+    async function applyBoosterToTile(r, c) {
+        isProcessing = true; let matched = [];
+        if (activeBooster === 'rocket') { inventory.rocket--; for (let i = 0; i < BOARD_SIZE; i++) if (board[r][i].type) matched.push({r: r, c: i}); } 
+        else if (activeBooster === 'bomb') { inventory.bomb--; for (let i = Math.max(0, r-1); i <= Math.min(BOARD_SIZE-1, r+1); i++) for (let j = Math.max(0, c-1); j <= Math.min(BOARD_SIZE-1, c+1); j++) if (board[i][j].type) matched.push({r: i, c: j}); }
+        saveUserProgress(); activeBooster = null; updateBoosterUI();
+        if (matched.length > 0) await handleMatches(matched); else isProcessing = false;
+    }
+
+    async function shuffleBoard() {
+        isProcessing = true;
+        for(let r=0; r<BOARD_SIZE; r++) for(let c=0; c<BOARD_SIZE; c++) board[r][c].element.style.transform = 'scale(0)';
+        await delay(200);
+        let flatTiles = [];
+        for(let r=0; r<BOARD_SIZE; r++) for(let c=0; c<BOARD_SIZE; c++) flatTiles.push(board[r][c].type);
+        flatTiles.sort(() => Math.random() - 0.5); 
+        let i = 0;
+        for(let r=0; r<BOARD_SIZE; r++) { for(let c=0; c<BOARD_SIZE; c++) { board[r][c].type = flatTiles[i++]; board[r][c].element.className = `tile tile-${board[r][c].type}`; board[r][c].element.innerHTML = TILE_ICONS[board[r][c].type]; board[r][c].element.style.transform = 'scale(1)'; } }
+        await delay(200);
+        let nextMatches = checkMatches(); if (nextMatches.length > 0) await handleMatches(nextMatches); else isProcessing = false;
+    }
+
+    function initBoard() {
+        boardContainer.innerHTML = ''; board = [];
+        for (let r = 0; r < BOARD_SIZE; r++) {
+            board[r] = [];
+            for (let c = 0; c < BOARD_SIZE; c++) {
+                let type;
+                do { type = TILE_TYPES[Math.floor(Math.random() * TILE_TYPES.length)]; } while ((c >= 2 && board[r][c-1].type === type && board[r][c-2].type === type) || (r >= 2 && board[r-1][c].type === type && board[r-2][c].type === type));
+                const tileEl = document.createElement('div'); tileEl.className = `tile tile-${type}`; tileEl.dataset.row = r; tileEl.dataset.col = c; tileEl.innerHTML = TILE_ICONS[type]; tileEl.addEventListener('click', onTileClick);
+                boardContainer.appendChild(tileEl); board[r][c] = { type: type, element: tileEl };
+            }
+        }
+    }
+
+    function onTileClick(e) {
+        if (isProcessing || moves <= 0 || bossHp <= 0) return;
+        const tileEl = e.currentTarget; const r = parseInt(tileEl.dataset.row); const c = parseInt(tileEl.dataset.col);
+        if (activeBooster) { applyBoosterToTile(r, c); return; }
+        if (!selectedTile) { selectedTile = { r, c, element: tileEl }; tileEl.classList.add('selected'); } 
+        else {
+            const dist = Math.abs(selectedTile.r - r) + Math.abs(selectedTile.c - c);
+            if (dist === 1) swapTiles(selectedTile.r, selectedTile.c, r, c); 
+            else { selectedTile.element.classList.remove('selected'); selectedTile = { r, c, element: tileEl }; tileEl.classList.add('selected'); }
+        }
+    }
+
+    async function swapTiles(r1, c1, r2, c2) {
+        isProcessing = true; if (selectedTile) { selectedTile.element.classList.remove('selected'); selectedTile = null; }
+        const temp = board[r1][c1].type; board[r1][c1].type = board[r2][c2].type; board[r2][c2].type = temp; updateBoardUI();
+        await delay(300);
+        const matches = checkMatches();
+        if (matches.length > 0) { moves--; document.getElementById('moves-val').innerText = moves; await handleMatches(matches); } 
+        else {
+            const temp2 = board[r1][c1].type; board[r1][c1].type = board[r2][c2].type; board[r2][c2].type = temp2; updateBoardUI();
+            if (moves <= 0 && bossHp > 0) showGameOver(false); 
+        }
+        isProcessing = false;
+    }
+
+    function updateBoardUI() {
+        for (let r = 0; r < BOARD_SIZE; r++) for (let c = 0; c < BOARD_SIZE; c++) {
+            const tile = board[r][c]; if(tile.type) { tile.element.className = `tile tile-${tile.type}`; tile.element.innerHTML = TILE_ICONS[tile.type]; }
+        }
+    }
+
+    function checkMatches() {
+        let matched = []; let isMatched = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(false));
+        for (let r = 0; r < BOARD_SIZE; r++) for (let c = 0; c < BOARD_SIZE - 2; c++) { let type = board[r][c].type; if (type && board[r][c+1].type === type && board[r][c+2].type === type) { isMatched[r][c] = true; isMatched[r][c+1] = true; isMatched[r][c+2] = true; } }
+        for (let c = 0; c < BOARD_SIZE; c++) for (let r = 0; r < BOARD_SIZE - 2; r++) { let type = board[r][c].type; if (type && board[r+1][c].type === type && board[r+2][c].type === type) { isMatched[r][c] = true; isMatched[r+1][c] = true; isMatched[r+2][c] = true; } }
+        for (let r = 0; r < BOARD_SIZE; r++) for (let c = 0; c < BOARD_SIZE; c++) if (isMatched[r][c]) matched.push({r, c});
+        return matched;
+    }
+
+    async function handleMatches(matches) {
+        // Подсчет маны перед удалением
+        let matchColors = { blue: 0, green: 0, purple: 0, red: 0 };
+        matches.forEach(pos => { 
+            board[pos.r][pos.c].element.classList.add('match-anim'); 
+            let t = board[pos.r][pos.c].type;
+            if (matchColors[t] !== undefined) matchColors[t]++;
+        });
+        
+        // Начисляем ману (например по 6 маны за 1 фишку нужного цвета)
+        for (let color in matchColors) {
+            if (matchColors[color] > 0) {
+                heroMana[color] = Math.min(100, heroMana[color] + matchColors[color] * 6);
+            }
+        }
+        updateManaUI();
+        
+        const damage = matches.length * 15; score += damage; bossHp = Math.max(0, bossHp - damage);
+        document.getElementById('score-val').innerText = score; updateBossUI();
+        
+        await delay(250); 
+
+        matches.forEach(pos => { board[pos.r][pos.c].type = null; board[pos.r][pos.c].element.innerHTML = ''; board[pos.r][pos.c].element.className = 'tile'; });
+
+        let didDrop = false;
+        for (let c = 0; c < BOARD_SIZE; c++) {
+            for (let r = BOARD_SIZE - 1; r >= 0; r--) {
+                if (board[r][c].type === null) {
+                    for (let lookupRow = r - 1; lookupRow >= 0; lookupRow--) {
+                        if (board[lookupRow][c].type !== null) {
+                            board[r][c].type = board[lookupRow][c].type; board[lookupRow][c].type = null;
+                            board[r][c].element.className = `tile tile-${board[r][c].type} drop-anim`; board[r][c].element.innerHTML = TILE_ICONS[board[r][c].type];
+                            board[lookupRow][c].element.className = 'tile'; board[lookupRow][c].element.innerHTML = '';
+                            didDrop = true; break;
+                        }
+                    }
+                }
+            }
+        }
+        if (didDrop) await delay(300);
+
+        let didSpawn = false;
+        for (let r = 0; r < BOARD_SIZE; r++) {
+            for (let c = 0; c < BOARD_SIZE; c++) {
+                if (board[r][c].type === null) {
+                    board[r][c].type = TILE_TYPES[Math.floor(Math.random() * TILE_TYPES.length)];
+                    board[r][c].element.className = `tile tile-${board[r][c].type} drop-anim`; board[r][c].element.innerHTML = TILE_ICONS[board[r][c].type];
+                    didSpawn = true;
+                }
+            }
+        }
+        if (didSpawn) await delay(350);
+
+        for (let r = 0; r < BOARD_SIZE; r++) for (let c = 0; c < BOARD_SIZE; c++) board[r][c].element.classList.remove('drop-anim');
+
+        const nextMatches = checkMatches();
+        if (nextMatches.length > 0) await handleMatches(nextMatches); 
+        else if (bossHp <= 0) showGameOver(true); 
+        else if (moves <= 0) showGameOver(false); 
+        else isProcessing = false;
+    }
+
+    function delay(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 </script>
 </body>
 </html>
