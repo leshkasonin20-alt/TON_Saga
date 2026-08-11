@@ -4,103 +4,97 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>TON Saga - Cosmic Saga</title>
-    <!-- ... (остальные скрипты прежние) ... -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+    <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
     <style>
-        /* Новые стили для панели героев */
-        .hero-abilities-panel {
-            display: flex;
-            justify-content: space-around;
-            padding: 10px;
-            background: rgba(0,0,0,0.5);
-            border-top: 2px solid #0088cc;
+        :root {
+            --bg-color: #060818;
+            --panel-bg: rgba(13, 19, 41, 0.9);
+            --accent-gold: #ffd700;
+            --boss-red: #ff3333;
         }
-        .hero-slot {
-            width: 22%;
-            text-align: center;
-        }
-        .hero-img {
-            width: 100%;
-            border-radius: 8px;
-            border: 2px solid #555;
-            cursor: pointer;
-        }
-        .mana-bar {
-            height: 6px;
-            background: #222;
-            margin-top: 5px;
-            border-radius: 3px;
-        }
+        * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; }
+        body { background: var(--bg-color); color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        #game-container { width: 100%; max-width: 480px; height: 100vh; position: relative; border-radius: 16px; overflow: hidden; background: #050814; }
+        .screen { position: absolute; width: 100%; height: 100%; top: 0; left: 0; opacity: 0; visibility: hidden; z-index: 1; padding: 20px; transition: opacity 0.3s; }
+        .screen.active { opacity: 1; visibility: visible; z-index: 10; }
+
+        /* Панель героев в битве */
+        .hero-abilities-panel { display: flex; justify-content: space-between; padding: 10px; background: rgba(0,0,0,0.6); border-top: 2px solid #0088cc; z-index: 20; position: absolute; bottom: 0; width: 100%; }
+        .hero-slot { width: 23%; text-align: center; }
+        .hero-img { width: 100%; border-radius: 8px; border: 2px solid #0088cc; cursor: pointer; }
+        .mana-bar { height: 6px; background: #222; margin-top: 4px; border-radius: 3px; overflow: hidden; }
         .mana-fill { height: 100%; background: #00d2ff; width: 0%; transition: width 0.3s; }
         
-        /* Экран Сюжета */
-        .mission-card {
-            background: var(--panel-bg);
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 12px;
-            border: 1px solid #0088cc;
-            text-align: center;
-        }
+        #board-container { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin-top: 10px; }
+        .tile { aspect-ratio: 1; border-radius: 8px; display: flex; justify-content: center; align-items: center; cursor: pointer; }
+        .btn-back { width: 40px; height: 40px; background: rgba(255,255,255,0.1); border-radius: 50%; border: none; color: #fff; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div id="game-container">
-    <!-- ЭКРАН СЮЖЕТА (Новый) -->
-    <div id="story-screen" class="screen">
-        <h2 class="screen-title">КОСМИЧЕСКАЯ САГА</h2>
-        <div class="mission-card" onclick="startGame()">
-            <h3>Миссия 1: Планета X</h3>
-            <p>Зачистка сектора от инсектоидов</p>
+    <!-- Меню -->
+    <div id="menu-screen" class="screen active">
+        <h1>TON SAGA</h1>
+        <button class="btn-play" onclick="switchScreen('story-screen')">СЮЖЕТНАЯ МИССИЯ</button>
+        <div class="menu-grid">
+            <div class="menu-card" onclick="openHeroes()"><h3>ГЕРОИ</h3></div>
+            <div class="menu-card" onclick="openShop()"><h3>МАГАЗИН</h3></div>
+            <div class="menu-card" onclick="openProfile()"><h3>ПРОФИЛЬ</h3></div>
         </div>
-        <button class="btn-back" onclick="switchScreen('menu-screen')">Назад</button>
     </div>
 
-    <!-- В ЭКРАНЕ БИТВЫ (#game-screen) добавь этот блок под доской -->
-    <div class="hero-abilities-panel">
-        <div class="hero-slot">
-            <img src="images/blue_trooper.png" class="hero-img" onclick="useHeroSkill('blue')">
-            <div class="mana-bar"><div class="mana-fill" id="mana-blue"></div></div>
-        </div>
-        <div class="hero-slot">
-            <img src="images/green_insectoid.png" class="hero-img" onclick="useHeroSkill('green')">
-            <div class="mana-bar"><div class="mana-fill" id="mana-green"></div></div>
-        </div>
-        <div class="hero-slot">
-            <img src="images/purple_mystic.png" class="hero-img" onclick="useHeroSkill('purple')">
-            <div class="mana-bar"><div class="mana-fill" id="mana-purple"></div></div>
-        </div>
-        <div class="hero-slot">
-            <img src="images/red_assault.png" class="hero-img" onclick="useHeroSkill('red')">
-            <div class="mana-bar"><div class="mana-fill" id="mana-red"></div></div>
+    <!-- Сюжет -->
+    <div id="story-screen" class="screen">
+        <h2 class="screen-title">ВЫБОР МИССИИ</h2>
+        <div class="mission-card" onclick="startGame()"><h3>Сектор: Туманность</h3><p>Уровень 1</p></div>
+        <button class="btn-back" onclick="switchScreen('menu-screen')">✕</button>
+    </div>
+
+    <!-- Битва -->
+    <div id="game-screen" class="screen">
+        <div class="game-header"><button class="btn-back" onclick="backToMenu()">✕</button></div>
+        <div id="board-container"></div>
+        <div class="hero-abilities-panel">
+            <div class="hero-slot"><img src="images/blue_trooper.png" class="hero-img" onclick="useHeroSkill('blue')"><div class="mana-bar"><div class="mana-fill" id="mana-blue"></div></div></div>
+            <div class="hero-slot"><img src="images/green_insectoid.png" class="hero-img" onclick="useHeroSkill('green')"><div class="mana-bar"><div class="mana-fill" id="mana-green"></div></div></div>
+            <div class="hero-slot"><img src="images/purple_mystic.png" class="hero-img" onclick="useHeroSkill('purple')"><div class="mana-bar"><div class="mana-fill" id="mana-purple"></div></div></div>
+            <div class="hero-slot"><img src="images/red_assault.png" class="hero-img" onclick="useHeroSkill('red')"><div class="mana-bar"><div class="mana-fill" id="mana-red"></div></div></div>
         </div>
     </div>
 </div>
 
 <script>
-    // Добавь эту логику в основной скрипт
+    // --- Твой функционал ---
+    const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({ manifestUrl: 'https://leshkasonin20-alt.github.io/TON_Saga/tonconnect-manifest.json' });
     let heroMana = { blue: 0, green: 0, purple: 0, red: 0 };
+
+    function switchScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
 
     function useHeroSkill(color) {
         if (heroMana[color] >= 100) {
-            alert("Использую навык: " + color.toUpperCase() + " СТРАЙК!");
+            alert(color.toUpperCase() + " АТАКА!");
             heroMana[color] = 0;
             updateManaUI();
-            bossHp -= 50; // Наносим урон
-            updateBossUI();
-        } else {
-            alert("Маны недостаточно!");
         }
     }
 
     function updateManaUI() {
-        for(let color in heroMana) {
-            document.getElementById('mana-' + color).style.width = heroMana[color] + '%';
-        }
+        for(let color in heroMana) document.getElementById('mana-'+color).style.width = heroMana[color] + '%';
     }
 
-    // При обновлении доски (в handleMatches) добавь начисление маны
-    // heroMana[type] += 10;
+    function startGame() {
+        switchScreen('game-screen');
+        // Тут твой initBoard()
+    }
+    
+    // В методе handleMatches добавь начисление маны:
+    // heroMana[type] = Math.min(100, heroMana[type] + 5);
     // updateManaUI();
 </script>
 </body>
