@@ -1,614 +1,185 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TON Saga - Cosmic Saga</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
-    <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
-    <style>
-        :root {
-            --panel-bg: rgba(9, 14, 30, 0.85);
-            --border-glow: #00e5ff;
-            --accent-gold: #ffd700;
-            --boss-red: #ff3333;
-        }
-
-        * {
-            box-sizing: border-box; user-select: none; -webkit-user-select: none;
-            -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0;
-        }
-
-        body {
-            background: #050814; color: #fff; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            overflow: hidden; height: 100vh; display: flex; justify-content: center; align-items: center;
-        }
-
-        .stars-bg {
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            background: linear-gradient(180deg, #050814 0%, #120b24 50%, #051428 100%);
-            z-index: 0; pointer-events: none;
-        }
-
-        #game-container {
-            width: 100%; max-width: 480px; height: 100vh; max-height: 850px;
-            position: relative; overflow: hidden; z-index: 1; box-shadow: 0 0 40px rgba(0, 229, 255, 0.1);
-            display: flex; flex-direction: column;
-        }
-
-        .screen {
-            position: absolute; width: 100%; height: 100%; top: 0; left: 0;
-            display: flex; flex-direction: column; padding: 10px 10px 70px 10px;
-            opacity: 0; visibility: hidden; pointer-events: none;
-            z-index: 2; transition: opacity 0.3s ease; overflow-y: auto;
-        }
-        .screen.active { opacity: 1; visibility: visible; pointer-events: auto; z-index: 15; }
-
-        /* ЗАГРУЗКА (1000191476.png) */
-        #loading-screen {
-            background: url('images/1000191476.png') no-repeat center center; background-size: cover;
-            justify-content: flex-end; align-items: center; padding-bottom: 95px; z-index: 9999;
-        }
-        #loading-screen::before {
-            content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 45%;
-            background: linear-gradient(to top, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0) 100%); z-index: 1;
-        }
-        .loading-bottom-ui { position: relative; z-index: 2; width: 85%; max-width: 350px; display: flex; flex-direction: column; align-items: center; }
-        .loading-bar-wrapper { width: 100%; height: 14px; background: rgba(10, 5, 20, 0.8); border: 1px solid rgba(155, 81, 224, 0.6); border-radius: 10px; padding: 2px; margin-bottom: 8px; }
-        .loading-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #6a00ff, #b700ff, #00d2ff); border-radius: 8px; transition: width 0.1s ease-out; }
-        .loading-percent { color: #fff; font-size: 1.2rem; font-weight: bold; margin-bottom: 8px; }
-        .loading-tip { color: #c9e2ff; font-size: 0.7rem; text-align: center; text-transform: uppercase; }
-
-        /* ГЛАВНЫЙ ЭКРАН (1000191477.png) */
-        #menu-screen {
-            background: url('images/1000191477.png') no-repeat center center; background-size: cover;
-            justify-content: flex-start; padding: 10px;
-        }
-        
-        /* Верхняя панель игрока */
-        .top-hud {
-            display: flex; justify-content: space-between; align-items: center;
-            background: rgba(10, 15, 30, 0.85); padding: 6px 10px; border-radius: 10px;
-            border: 1px solid rgba(0, 229, 255, 0.3); backdrop-filter: blur(5px); font-size: 0.75rem;
-        }
-        .commander-info { display: flex; align-items: center; gap: 8px; cursor: pointer; }
-        .vip-badge { background: linear-gradient(135deg, #f39c12, #d35400); color: #fff; font-weight: bold; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; }
-        .exp-bar { width: 80px; height: 4px; background: #222; border-radius: 2px; margin-top: 3px; overflow: hidden; }
-        .exp-fill { width: 70%; height: 100%; background: #00e5ff; }
-        .resources-row { display: flex; gap: 8px; align-items: center; }
-        .res-item { display: flex; align-items: center; gap: 3px; background: rgba(0,0,0,0.6); padding: 3px 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); }
-
-        /* Основной макет главного экрана */
-        .main-layout { display: flex; justify-content: space-between; margin-top: 8px; flex-grow: 1; }
-        
-        /* Левое вертикальное меню */
-        .left-menu { display: flex; flex-direction: column; gap: 6px; width: 65px; }
-        .left-btn {
-            background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(0, 229, 255, 0.3);
-            border-radius: 8px; padding: 6px 4px; text-align: center; cursor: pointer;
-            position: relative; backdrop-filter: blur(4px); transition: transform 0.1s;
-        }
-        .left-btn:active { transform: scale(0.95); }
-        .left-btn span { font-size: 0.6rem; color: #a5b4fc; display: block; margin-top: 2px; text-transform: uppercase; }
-        .left-btn-icon { font-size: 1.1rem; }
-        .notif-dot { position: absolute; top: -3px; right: -3px; width: 8px; height: 8px; background: #ff3333; border-radius: 50%; border: 1px solid #fff; }
-
-        /* Правая верхняя часть (Сезонный блок) */
-        .right-content { display: flex; flex-direction: column; width: calc(100% - 72px); gap: 8px; }
-        .season-card {
-            background: linear-gradient(135deg, rgba(30, 15, 50, 0.9), rgba(10, 20, 40, 0.9));
-            border: 1px solid rgba(155, 81, 224, 0.6); border-radius: 12px; padding: 8px 10px;
-            box-shadow: 0 0 15px rgba(155, 81, 224, 0.3);
-        }
-        .season-title { font-size: 0.75rem; color: #d896ff; font-weight: bold; }
-        .season-name { font-size: 0.95rem; font-weight: 900; color: #fff; margin: 2px 0; }
-        .season-timer { font-size: 0.65rem; color: #aaa; }
-        
-        .season-sub-btns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 6px; }
-        .sub-btn { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 4px; text-align: center; font-size: 0.6rem; cursor: pointer; }
-
-        /* БЛОКИ ВНИЗУ (Кампания и Испытания) */
-        .bottom-actions { display: grid; grid-template-columns: 70px 1fr 70px; gap: 6px; margin-top: auto; align-items: center; }
-        .side-action-btn { background: rgba(15, 23, 42, 0.9); border: 1px solid #00e5ff; border-radius: 10px; padding: 8px 4px; text-align: center; cursor: pointer; font-size: 0.65rem; }
-        
-        .campaign-btn {
-            background: linear-gradient(135deg, rgba(40, 20, 10, 0.95), rgba(15, 10, 25, 0.95));
-            border: 2px solid #ffaa00; border-radius: 12px; padding: 10px; text-align: center; cursor: pointer;
-            box-shadow: 0 0 20px rgba(255, 170, 0, 0.4);
-        }
-        .campaign-title { font-size: 1.1rem; font-weight: 950; color: #ffaa00; text-shadow: 0 0 10px rgba(255,170,0,0.6); letter-spacing: 1px; }
-        .campaign-subtitle { font-size: 0.65rem; color: #ddd; margin-top: 2px; }
-
-        /* 4 КАРТОЧКИ ВНИЗУ */
-        .cards-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 8px; }
-        .nav-card {
-            background: rgba(10, 18, 35, 0.85); border: 1px solid rgba(0, 229, 255, 0.3); border-radius: 8px;
-            padding: 8px 4px; text-align: center; cursor: pointer; backdrop-filter: blur(5px);
-        }
-        .nav-card h4 { font-size: 0.7rem; color: #00e5ff; margin-bottom: 3px; }
-        .nav-card p { font-size: 0.55rem; color: #aaa; line-height: 1.1; }
-
-        /* НИЖНИЙ ТАББАР */
-        .bottom-navbar {
-            position: absolute; bottom: 0; left: 0; width: 100%; height: 60px;
-            background: rgba(5, 8, 20, 0.95); border-top: 1px solid rgba(0, 229, 255, 0.3);
-            display: flex; justify-content: space-around; align-items: center; z-index: 100;
-            backdrop-filter: blur(10px);
-        }
-        .nav-tab { display: flex; flex-direction: column; align-items: center; color: #88a; cursor: pointer; font-size: 0.6rem; text-transform: uppercase; gap: 2px; }
-        .nav-tab.active { color: #00e5ff; text-shadow: 0 0 8px rgba(0,229,255,0.8); }
-        .nav-tab span { font-size: 1.1rem; }
-
-        /* БОЙ */
-        #game-screen { background: #050814; justify-content: space-between; }
-        .game-header { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 5px; }
-        .btn-back { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: white; width: 36px; height: 36px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; }
-        
-        .boss-battle-panel { background: rgba(30, 5, 5, 0.85); border: 2px solid var(--boss-red); border-radius: 12px; padding: 8px; width: 100%; margin-bottom: 5px; }
-        .boss-info-row { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: bold; color: #fff; margin-bottom: 4px; }
-        .boss-hp-bar-container { width: 100%; height: 12px; background: #000; border-radius: 6px; overflow: hidden; border: 1px solid rgba(255, 51, 51, 0.5); }
-        .boss-hp-bar-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #ff3333, #ff9933); transition: width 0.3s ease-out; }
-
-        #board-container { width: 100%; aspect-ratio: 1; background: rgba(5, 10, 25, 0.6); border: 2px solid rgba(0,229,255,0.4); border-radius: 12px; padding: 6px; display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
-        .tile { width: 100%; height: 100%; border-radius: 6px; display: flex; justify-content: center; align-items: center; font-size: 1.4rem; cursor: pointer; position: relative; }
-        .tile.selected { outline: 3px solid #fff; box-shadow: 0 0 15px #fff; z-index: 10; }
-        .match-anim { animation: popOut 0.25s ease-in forwards; }
-        .drop-anim { animation: slideDown 0.3s ease-out forwards; }
-        @keyframes popOut { 50% { transform: scale(1.2); opacity: 0.8; } 100% { transform: scale(0); opacity: 0; } }
-        @keyframes slideDown { 0% { transform: translateY(-100%); opacity: 0.5; } 100% { transform: translateY(0); opacity: 1; } }
-        .tile-blue { background: radial-gradient(circle, #00d2ff, #0066ff); }
-        .tile-yellow { background: radial-gradient(circle, #ffeb3b, #f57f17); }
-        .tile-purple { background: radial-gradient(circle, #ea80fc, #aa00ff); }
-        .tile-green { background: radial-gradient(circle, #b9f6ca, #00c853); }
-        .tile-red { background: radial-gradient(circle, #ff8a80, #d50000); }
-
-        .hero-abilities-panel { display: flex; justify-content: space-between; width: 100%; background: var(--panel-bg); padding: 8px; border-radius: 10px; border: 1px solid rgba(0,229,255,0.2); margin-top: auto; }
-        .hero-slot { width: 23%; display: flex; flex-direction: column; align-items: center; }
-        .hero-img { width: 100%; border-radius: 6px; border: 2px solid transparent; }
-        .hero-img.ready { border-color: var(--accent-gold); box-shadow: 0 0 10px var(--accent-gold); cursor: pointer; }
-        .mana-bar { width: 100%; height: 5px; background: #000; border-radius: 3px; margin-top: 4px; overflow: hidden; }
-        .mana-fill { height: 100%; width: 0%; transition: width 0.3s; }
-        .mana-fill.blue { background: #00d2ff; } .mana-fill.green { background: #00c853; } .mana-fill.purple { background: #aa00ff; } .mana-fill.red { background: #ff3333; }
-
-        /* УНИВЕРСАЛЬНЫЕ ЭКРАНЫ */
-        .content-screen { background: #070b19; padding: 15px; }
-        .screen-title { color: var(--accent-gold); font-size: 1.4rem; text-align: center; margin-bottom: 15px; text-transform: uppercase; }
-        .generic-card { background: var(--panel-bg); border: 1px solid rgba(0,229,255,0.3); border-radius: 10px; padding: 12px; margin-bottom: 10px; }
-        .btn-action { background: linear-gradient(135deg, #0088cc, #0055aa); border: none; color: #fff; padding: 10px; border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 8px; }
-
-        #game-over-modal { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); display: flex; justify-content: center; align-items: center; z-index: 2000; opacity: 0; visibility: hidden; }
-        #game-over-modal.active { opacity: 1; visibility: visible; backdrop-filter: blur(10px); }
-        .modal-content { background: var(--panel-bg); border: 2px solid #00e5ff; border-radius: 16px; padding: 25px; text-align: center; width: 85%; }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#050814">
+<title>Cosmic Heroes — TON Saga</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+<script src="https://sad.adsgram.ai/js/sad.min.js"></script>
+<style>
+:root{
+  --bg:#050814;--panel:rgba(8,15,31,.88);--panel2:rgba(14,23,45,.78);
+  --cyan:#00e5ff;--violet:#a855f7;--gold:#ffd34d;--red:#ff4d5f;--green:#35e07f;
+  --text:#f5f7ff;--muted:#91a0bd;--line:rgba(126,154,205,.22);
+  --safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px);
+  --nav-h:66px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:Inter,Segoe UI,Roboto,Arial,sans-serif}
+button{font:inherit;color:inherit;border:0}
+body{display:flex;justify-content:center;align-items:center}
+#game-container{position:relative;width:100%;height:100dvh;min-height:100dvh;max-width:520px;overflow:hidden;background:#050814;isolation:isolate}
+#game-container:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 10%,rgba(0,229,255,.10),transparent 34%),radial-gradient(circle at 90% 70%,rgba(168,85,247,.10),transparent 32%);pointer-events:none;z-index:-1}
+.screen{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;padding:calc(var(--safe-top) + 10px) 12px calc(var(--nav-h) + var(--safe-bottom) + 10px);opacity:0;visibility:hidden;pointer-events:none;transform:translateY(5px);transition:opacity .22s ease,transform .22s ease;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.screen.active{opacity:1;visibility:visible;pointer-events:auto;transform:none}
+.screen::-webkit-scrollbar{width:0}
+/* Loading */
+#loading-screen{justify-content:flex-end;align-items:center;padding-bottom:calc(72px + var(--safe-bottom));background:url('images/loading-screen.png') center/cover no-repeat #050814;overflow:hidden}
+#loading-screen:after{content:"";position:absolute;inset:35% 0 0;background:linear-gradient(to top,rgba(0,0,0,.96),rgba(0,0,0,.55),transparent);pointer-events:none}
+.loading-ui{position:relative;z-index:2;width:min(88%,390px);text-align:center}
+.loading-logo{font-weight:1000;letter-spacing:.16em;font-size:clamp(1.2rem,6vw,1.7rem);text-shadow:0 0 22px rgba(0,229,255,.7);margin-bottom:12px}
+.loading-sub{font-size:.62rem;color:#a9c9e9;letter-spacing:.12em;margin-bottom:12px}
+.loading-track{height:13px;padding:2px;border-radius:99px;border:1px solid rgba(168,85,247,.7);background:rgba(4,7,18,.8);box-shadow:0 0 18px rgba(0,229,255,.18)}
+.loading-fill{height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#6d28d9,#a855f7,#00e5ff);box-shadow:0 0 12px rgba(0,229,255,.55);transition:width .12s}
+.loading-percent{font-size:.8rem;font-weight:900;margin-top:7px;color:#dff9ff}
+/* Menu */
+#menu-screen{background:linear-gradient(to bottom,rgba(2,6,18,.18),rgba(3,7,19,.76)),url('images/menu-bg.png') center/cover no-repeat #050814}
+#menu-screen:after{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,rgba(2,5,15,.05) 0%,transparent 36%,rgba(2,5,15,.72) 76%,rgba(2,5,15,.94));pointer-events:none;z-index:-1}
+.top-hud{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px;border:1px solid var(--line);border-radius:15px;background:rgba(5,10,24,.76);backdrop-filter:blur(14px);box-shadow:0 10px 30px rgba(0,0,0,.25);flex:none}
+.commander{display:flex;align-items:center;gap:8px;min-width:0}
+.avatar{width:38px;height:38px;flex:none;border-radius:12px;display:grid;place-items:center;background:linear-gradient(145deg,#102943,#07101f);border:1px solid rgba(0,229,255,.45);font-size:1.15rem;box-shadow:0 0 14px rgba(0,229,255,.15)}
+.commander-main{min-width:0}.commander-name{font-size:.74rem;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.commander-level{font-size:.58rem;color:var(--cyan);margin-top:1px}.exp{width:88px;height:4px;border-radius:99px;background:#151c2e;overflow:hidden;margin-top:4px}.exp i{display:block;width:70%;height:100%;background:linear-gradient(90deg,var(--cyan),#7c3aed)}
+.vip{padding:4px 6px;border-radius:6px;background:linear-gradient(135deg,#f59e0b,#b45309);font-size:.55rem;font-weight:1000;flex:none}
+.resources{display:flex;gap:4px;align-items:center}.resource{display:flex;gap:3px;align-items:center;padding:5px 6px;border-radius:9px;background:rgba(0,0,0,.42);border:1px solid rgba(255,255,255,.08);font-size:.61rem;font-weight:800;white-space:nowrap}
+.menu-body{position:relative;display:grid;grid-template-columns:62px minmax(0,1fr);gap:8px;flex:1;min-height:0;margin-top:9px}
+.quick-menu{display:flex;flex-direction:column;gap:6px;overflow:auto;padding:2px 1px}.quick-menu::-webkit-scrollbar{width:0}
+.quick-btn{position:relative;width:100%;min-height:56px;padding:6px 3px;border-radius:12px;border:1px solid rgba(0,229,255,.25);background:rgba(8,17,35,.76);backdrop-filter:blur(10px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:0 5px 12px rgba(0,0,0,.18);transition:transform .1s,border-color .1s}
+.quick-btn:active,.nav-btn:active,.action:active,.hero-card:active{transform:scale(.97)}
+.quick-btn .ico{font-size:1.08rem}.quick-btn .txt{font-size:.48rem;font-weight:900;color:#b8c5df;letter-spacing:.03em}.dot{position:absolute;top:-2px;right:-2px;width:9px;height:9px;border-radius:50%;background:#ff4054;border:2px solid #071020;box-shadow:0 0 8px #ff4054}
+.main-column{display:flex;flex-direction:column;gap:8px;min-width:0;min-height:0}
+.season-card{padding:10px;border-radius:15px;border:1px solid rgba(168,85,247,.5);background:linear-gradient(135deg,rgba(31,16,56,.82),rgba(5,18,39,.8));box-shadow:0 0 25px rgba(168,85,247,.16);backdrop-filter:blur(12px)}
+.eyebrow{font-size:.55rem;font-weight:1000;letter-spacing:.12em;color:#d4a8ff}.season-name{font-size:1rem;font-weight:1000;line-height:1.05;margin:3px 0}.timer{font-size:.55rem;color:#a8b4c9}.season-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:7px}.mini-btn{min-width:0;padding:6px 2px;border-radius:8px;background:rgba(0,0,0,.34);border:1px solid rgba(255,255,255,.10);font-size:.49rem;font-weight:900;color:#d7def0}
+.feature{position:relative;min-height:0;flex:1;display:flex;align-items:flex-end;padding:10px;border-radius:16px;border:1px solid rgba(0,229,255,.20);background:linear-gradient(180deg,transparent 40%,rgba(4,7,18,.82) 100%);overflow:hidden}
+.feature:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 60% 40%,rgba(0,229,255,.12),transparent 35%)}
+.feature-copy{position:relative;z-index:2}.feature-kicker{font-size:.54rem;color:var(--cyan);font-weight:1000;letter-spacing:.12em}.feature-title{font-size:clamp(1.2rem,7vw,1.75rem);font-weight:1000;line-height:.95;text-transform:uppercase;text-shadow:0 0 16px rgba(0,229,255,.35)}.feature-desc{font-size:.57rem;color:#b5bfd1;margin-top:4px;max-width:90%}
+.bottom-actions{display:grid;grid-template-columns:72px minmax(0,1fr) 72px;gap:6px;flex:none}.action{min-height:58px;border-radius:13px;border:1px solid rgba(0,229,255,.35);background:rgba(8,17,35,.84);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-size:.52rem;font-weight:1000;box-shadow:0 7px 16px rgba(0,0,0,.2)}
+.action.main{border:1.5px solid #ffb300;background:linear-gradient(135deg,rgba(66,34,8,.92),rgba(16,10,28,.92));box-shadow:0 0 20px rgba(255,179,0,.20)}.action.main b{font-size:1rem;color:#ffbf2f;letter-spacing:.04em}.action small{color:#9ca8be;margin-top:2px;font-size:.45rem}
+.cards-row{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;flex:none}.nav-card{min-width:0;padding:7px 3px;border-radius:10px;background:rgba(8,17,35,.78);border:1px solid rgba(0,229,255,.22);text-align:center}.nav-card b{display:block;font-size:.54rem;color:var(--cyan)}.nav-card span{display:block;font-size:.43rem;color:#8996ad;margin-top:2px}
+/* Bottom nav */
+.bottom-navbar{position:absolute;left:0;right:0;bottom:0;height:calc(var(--nav-h) + var(--safe-bottom));padding:5px 8px var(--safe-bottom);display:grid;grid-template-columns:repeat(5,1fr);gap:4px;background:rgba(3,7,18,.94);border-top:1px solid rgba(0,229,255,.18);backdrop-filter:blur(16px);z-index:100;transition:transform .2s}.bottom-navbar.hidden{transform:translateY(110%)}
+.nav-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:10px;color:#7f8da7;font-size:.48rem;font-weight:900}.nav-btn .ico{font-size:1.05rem;line-height:1}.nav-btn.active{color:var(--cyan);background:rgba(0,229,255,.07);text-shadow:0 0 10px rgba(0,229,255,.5)}
+/* Generic screens */
+.content-screen{background:radial-gradient(circle at 50% 0,rgba(0,229,255,.08),transparent 34%),#070b19}.screen-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex:none;margin-bottom:8px}.screen-title{margin:0;text-align:center;font-size:1rem;font-weight:1000;letter-spacing:.08em;color:#dcecff;text-transform:uppercase;flex:1}.back{width:38px;height:38px;border-radius:11px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);font-size:1rem;flex:none}.spacer{width:38px}
+.panel{padding:11px;border-radius:14px;background:var(--panel);border:1px solid var(--line);box-shadow:0 10px 24px rgba(0,0,0,.16);margin-bottom:8px}.panel-title{font-size:.76rem;font-weight:1000}.panel-sub{font-size:.58rem;color:var(--muted);line-height:1.35;margin-top:3px}.primary{width:100%;padding:10px;border-radius:10px;margin-top:8px;background:linear-gradient(135deg,#0ea5e9,#2563eb);font-size:.66rem;font-weight:1000;box-shadow:0 0 18px rgba(37,99,235,.2)}
+/* Heroes */
+.hero-list{display:grid;grid-template-columns:1fr 1fr;gap:7px}.hero-card{position:relative;min-width:0;overflow:hidden;border-radius:14px;background:linear-gradient(180deg,rgba(15,28,52,.92),rgba(7,12,25,.96));border:1px solid var(--line);transition:transform .1s}.hero-art{width:100%;aspect-ratio:1.55;object-fit:cover;display:block}.hero-info{padding:7px}.hero-name{font-size:.68rem;font-weight:1000}.hero-class{font-size:.48rem;color:var(--muted)}.hero-level{font-size:.5rem;color:var(--cyan);margin-top:3px}.power{height:4px;background:#111a2b;border-radius:9px;margin-top:4px;overflow:hidden}.power i{display:block;height:100%;width:74%;background:linear-gradient(90deg,var(--cyan),var(--violet))}.rarity{position:absolute;top:6px;left:6px;padding:3px 5px;border-radius:6px;background:rgba(0,0,0,.65);font-size:.45rem;font-weight:1000}
+/* Battle */
+#game-screen{background:radial-gradient(circle at 50% 28%,rgba(0,229,255,.08),transparent 35%),#050814;overflow:hidden;padding-bottom:calc(10px + var(--safe-bottom))}.battle-head{display:flex;align-items:center;justify-content:space-between;gap:7px;flex:none}.battle-stat{padding:6px 8px;border-radius:9px;background:rgba(7,14,29,.78);border:1px solid var(--line);font-size:.56rem;font-weight:900}.battle-stat b{color:var(--gold)}
+.boss-panel{flex:none;padding:8px 9px;border-radius:13px;border:1px solid rgba(255,77,95,.55);background:linear-gradient(135deg,rgba(56,8,20,.76),rgba(15,7,20,.85));box-shadow:0 0 22px rgba(255,77,95,.10)}.boss-row{display:flex;justify-content:space-between;gap:6px;font-size:.62rem;font-weight:1000}.boss-row span:last-child{color:#ff8793}.hp{height:10px;margin-top:5px;border-radius:99px;background:#14060b;border:1px solid rgba(255,77,95,.25);overflow:hidden}.hp i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#ef233c,#ff9f43);transition:width .25s}
+.board-wrap{flex:1;min-height:0;display:grid;place-items:center;padding:4px 0}.board{width:min(100%,58dvh);aspect-ratio:1;padding:5px;display:grid;grid-template-columns:repeat(8,1fr);gap:3px;border-radius:15px;border:1px solid rgba(0,229,255,.35);background:rgba(4,10,25,.74);box-shadow:0 0 28px rgba(0,229,255,.09)}
+.tile{border-radius:6px;display:grid;place-items:center;font-size:clamp(.9rem,4.7vw,1.35rem);cursor:pointer;box-shadow:inset 0 1px 4px rgba(255,255,255,.22),0 2px 5px rgba(0,0,0,.2)}.tile.selected{outline:2px solid #fff;box-shadow:0 0 13px #fff}.tile-blue{background:radial-gradient(circle at 35% 30%,#9af7ff,#0284c7)}.tile-yellow{background:radial-gradient(circle at 35% 30%,#fff58a,#d97706)}.tile-purple{background:radial-gradient(circle at 35% 30%,#f2b5ff,#7e22ce)}.tile-green{background:radial-gradient(circle at 35% 30%,#b9ffcf,#16a34a)}.tile-red{background:radial-gradient(circle at 35% 30%,#ffb0b8,#dc2626)}
+.tip{flex:none;text-align:center;font-size:.52rem;color:#79eaff;min-height:20px;padding:2px}.heroes-battle{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;flex:none;padding:6px;border-radius:12px;background:rgba(7,13,27,.82);border:1px solid var(--line)}.battle-hero{min-width:0;text-align:center}.battle-hero img{width:100%;aspect-ratio:1.25;object-fit:cover;border-radius:8px;border:1px solid rgba(255,255,255,.10);display:block}.battle-hero.ready img{border-color:var(--gold);box-shadow:0 0 12px rgba(255,211,77,.55)}.mana{height:4px;margin-top:3px;border-radius:99px;background:#10192b;overflow:hidden}.mana i{display:block;width:0;height:100%;transition:width .2s}.mana-blue{background:#22d3ee}.mana-green{background:#22c55e}.mana-purple{background:#c026d3}.mana-red{background:#ef4444}.skill-label{font-size:.43rem;color:#8d9bb3;margin-top:2px}
+/* Modal / toast */
+.modal{position:absolute;inset:0;z-index:1000;display:grid;place-items:center;padding:20px;background:rgba(0,0,0,.76);backdrop-filter:blur(10px);opacity:0;visibility:hidden;pointer-events:none;transition:.2s}.modal.active{opacity:1;visibility:visible;pointer-events:auto}.modal-card{width:min(90%,390px);padding:18px;border-radius:18px;background:linear-gradient(145deg,#0c1830,#080d1d);border:1px solid rgba(0,229,255,.38);box-shadow:0 20px 60px rgba(0,0,0,.45)}.modal-title{font-size:1.05rem;font-weight:1000;color:var(--gold)}.modal-text{font-size:.65rem;color:#aab6ca;line-height:1.5;margin-top:6px}.toast{position:absolute;left:50%;bottom:calc(var(--nav-h) + var(--safe-bottom) + 12px);transform:translate(-50%,20px);z-index:1500;max-width:88%;padding:9px 12px;border-radius:10px;background:rgba(7,13,27,.96);border:1px solid rgba(0,229,255,.3);font-size:.6rem;text-align:center;opacity:0;pointer-events:none;transition:.2s}.toast.show{opacity:1;transform:translate(-50%,0)}
+@media (max-height:650px){:root{--nav-h:60px}.quick-btn{min-height:49px}.season-card{padding:8px}.feature-title{font-size:1.15rem}.bottom-actions{grid-template-columns:65px minmax(0,1fr) 65px}.cards-row{gap:4px}.hero-list{gap:5px}.panel{padding:9px}.board{width:min(100%,51dvh)}}
+@media (min-width:521px){#game-container{border-left:1px solid rgba(0,229,255,.08);border-right:1px solid rgba(0,229,255,.08);box-shadow:0 0 70px rgba(0,0,0,.35)}}
+</style>
 </head>
 <body>
-
-<div class="stars-bg"></div>
-
 <div id="game-container">
-    
-    <!-- ЭКРАН ЗАГРУЗКИ (1000191476.png) -->
-    <div id="loading-screen" class="screen active">
-        <div class="loading-bottom-ui">
-            <div class="loading-bar-wrapper"><div class="loading-bar-fill" id="loading-fill"></div></div>
-            <div class="loading-percent"><span id="loading-percentage">0</span>%</div>
-            <div class="loading-tip" id="loading-tip-text">ИНИЦИАЛИЗАЦИЯ КРИПТО-СЕТИ ТОН...</div>
-        </div>
+  <div id="loading-screen" class="screen active">
+    <div class="loading-ui"><div class="loading-logo">COSMIC HEROES</div><div class="loading-sub">ИНИЦИАЛИЗАЦИЯ ГАЛАКТИЧЕСКОЙ СЕТИ</div><div class="loading-track"><div id="loading-fill" class="loading-fill"></div></div><div class="loading-percent"><span id="loading-percentage">0</span>%</div></div>
+  </div>
+
+  <div id="menu-screen" class="screen">
+    <div class="top-hud">
+      <div class="commander" onclick="switchScreen('profile-screen')"><div class="avatar" id="user-avatar">👽</div><div class="commander-main"><div class="commander-name" id="user-name">КОМАНДИР</div><div class="commander-level">УР. 27 • ГАЛАКТИЧЕСКИЙ РЕЙНДЖЕР</div><div class="exp"><i></i></div></div><div class="vip">VIP 3</div></div>
+      <div class="resources"><div class="resource">⚡ <span>120</span></div><div class="resource">🪙 <span id="menu-coins">125K</span></div><div class="resource">💎 <span>2.4K</span></div></div>
     </div>
 
-    <!-- ГЛАВНЫЙ ЭКРАН (1000191477.png) -->
-    <div id="menu-screen" class="screen">
-        <div class="top-hud">
-            <div class="commander-info" onclick="switchScreen('profile-screen')">
-                <div class="avatar" style="width:32px; height:32px; font-size:0.9rem;" id="user-avatar">🐸</div>
-                <div>
-                    <div style="font-weight: bold; font-size: 0.75rem;" id="user-name">КОМАНДИР</div>
-                    <div style="font-size: 0.6rem; color: #00e5ff;">УРОВЕНЬ 27</div>
-                    <div class="exp-bar"><div class="exp-fill"></div></div>
-                </div>
-                <div class="vip-badge">VIP 3</div>
-            </div>
-            <div class="resources-row">
-                <div class="res-item">⚡ <span>120/120</span></div>
-                <div class="res-item">🪙 <span id="menu-gems">125 450</span></div>
-                <div class="res-item">💎 <span>2 450</span></div>
-            </div>
-        </div>
+    <div class="menu-body">
+      <div class="quick-menu">
+        <button class="quick-btn" onclick="openPanel('СОБЫТИЯ','Еженедельные космические события уже активны. Собери награды и подними рейтинг.')"><i class="dot"></i><div class="ico">⭐</div><div class="txt">События</div></button>
+        <button class="quick-btn" onclick="openPanel('СЕЗОННЫЙ ПРОПУСК','Сезон 1 «Пробуждение тьмы». Выполняй задания и открывай космические награды.')"><div class="ico">🎖️</div><div class="txt">Пропуск</div></button>
+        <button class="quick-btn" onclick="switchScreen('shop-screen')"><i class="dot"></i><div class="ico">🛒</div><div class="txt">Магазин</div></button>
+        <button class="quick-btn" onclick="switchScreen('quests-screen')"><i class="dot"></i><div class="ico">📋</div><div class="txt">Задания</div></button>
+        <button class="quick-btn" onclick="openPanel('ТРОФЕИ','Твой командирский рейтинг растёт. Новые достижения появятся после побед над боссами.')"><div class="ico">🏆</div><div class="txt">Трофеи</div></button>
+        <button class="quick-btn" onclick="openPanel('ПОЧТА','Новых сообщений нет. Здесь будут подарки, компенсации и сообщения команды.')"><i class="dot"></i><div class="ico">✉️</div><div class="txt">Почта</div></button>
+        <button class="quick-btn" onclick="openPanel('ДРУЗЬЯ','3 командира сейчас онлайн. Приглашай друзей и получай бонусы.')"><div class="ico">👥</div><div class="txt">Друзья</div></button>
+      </div>
 
-        <div class="main-layout">
-            <div class="left-menu">
-                <div class="left-btn" onclick="openAlert('События недели активны!')">
-                    <div class="notif-dot"></div>
-                    <div class="left-btn-icon">⭐</div><span>События</span>
-                </div>
-                <div class="left-btn" onclick="openAlert('Боевой пропуск: сезон открыт!')">
-                    <div class="left-btn-icon">🎖️</div><span>Пропуск</span>
-                </div>
-                <div class="left-btn" onclick="switchScreen('shop-screen')">
-                    <div class="notif-dot"></div>
-                    <div class="left-btn-icon">🛒</div><span>Магазин</span>
-                </div>
-                <div class="left-btn" onclick="switchScreen('quests-screen')">
-                    <div class="notif-dot"></div>
-                    <div class="left-btn-icon">📋</div><span>Задания</span>
-                </div>
-                <div class="left-btn" onclick="openAlert('Достижения получены!')">
-                    <div class="left-btn-icon">🏆</div><span>Трофеи</span>
-                </div>
-                <div class="left-btn" onclick="openAlert('Новых сообщений нет')">
-                    <div class="notif-dot"></div>
-                    <div class="left-btn-icon">✉️</div><span>Почта</span>
-                </div>
-                <div class="left-btn" onclick="openAlert('Друзья в сети: 3')">
-                    <div class="left-btn-icon">👥</div><span>Друзья</span>
-                </div>
-            </div>
-
-            <div class="right-content">
-                <div class="season-card">
-                    <div class="season-title">СЕЗОН 1</div>
-                    <div class="season-name">ПРОБУЖДЕНИЕ ТЬМЫ</div>
-                    <div class="season-timer">ДО КОНЦА СЕЗОНА: 24Д 14Ч</div>
-                    <div class="season-sub-btns">
-                        <div class="sub-btn" onclick="openAlert('Турнирная таблица загружается')">🏆 Турнир</div>
-                        <div class="sub-btn" onclick="openAlert('Ваш рейтинг: #42')">📈 Рейтинг</div>
-                        <div class="sub-btn" onclick="openAlert('Гильдия TON активна')">🛡️ Гильдия</div>
-                        <div class="sub-btn" onclick="openAlert('Свежие новости галактики')">📰 Новости</div>
-                    </div>
-                </div>
-            </div>
+      <div class="main-column">
+        <div class="season-card">
+          <div class="eyebrow">СЕЗОН 01 • ГАЛАКТИЧЕСКИЙ РЕЖИМ</div><div class="season-name">ПРОБУЖДЕНИЕ ТЬМЫ</div><div class="timer">До конца сезона: 24д 14ч</div>
+          <div class="season-grid"><button class="mini-btn" onclick="openPanel('ТУРНИР','Галактическая арена. Выставь 4 героев и сражайся за рейтинг.')">🏆 Турнир</button><button class="mini-btn" onclick="openPanel('РЕЙТИНГ','Текущий рейтинг командира: #42. До следующей лиги — 180 очков.')">📈 Рейтинг</button><button class="mini-btn" onclick="openPanel('ГИЛЬДИЯ','Гильдия TON активна. Здесь будут совместные задания и космические рейды.')">🛡️ Гильдия</button><button class="mini-btn" onclick="openPanel('НОВОСТИ','На орбите обнаружен новый сигнал. Следи за событиями галактики.')">📰 Новости</button></div>
         </div>
-
-        <div class="bottom-actions">
-            <div class="side-action-btn" onclick="startGame()">
-                <div style="font-size: 1.1rem;">⚔️</div>
-                <b>БЫСТРЫЙ БОЙ</b>
-            </div>
-            <div class="campaign-btn" onclick="startGame()">
-                <div class="campaign-title">КАМПАНИЯ</div>
-                <div class="campaign-subtitle">ГЛАВА 7-12 • АЗРАК — ПОЖИРАТЕЛЬ ЗВЁЗД</div>
-            </div>
-            <div class="side-action-btn" onclick="openAlert('Испытания открываются на 30 уровне')">
-                <div style="font-size: 1.1rem;">👾</div>
-                <b>ИСПЫТАНИЯ</b>
-            </div>
+        <div class="feature">
+          <div class="feature-copy"><div class="feature-kicker">ГЛАВА 7 • БОСС СЕКТОРА</div><div class="feature-title">АЗРАК<br>ПОЖИРАТЕЛЬ ЗВЁЗД</div><div class="feature-desc">Собери команду, зарядь ультимейты и уничтожь древнего ксеноморфа.</div></div>
         </div>
-
-        <div class="cards-row">
-            <div class="nav-card" onclick="openAlert('Карта планет: сектор исследован')">
-                <h4>ПЛАНЕТЫ</h4><p>Исследуй миры</p>
-            </div>
-            <div class="nav-card" onclick="switchScreen('heroes-screen')">
-                <h4>ГЕРОИ</h4><p>Прокачка отряда</p>
-            </div>
-            <div class="nav-card" onclick="openAlert('Улучшение карт экипировки')">
-                <h4>КАРТЫ</h4><p>Усиление мощи</p>
-            </div>
-            <div class="nav-card" onclick="openAlert('Артефакты пустоты пусты')">
-                <h4>АРТЕФАКТЫ</h4><p>Редкие эффекты</p>
-            </div>
-        </div>
+        <div class="bottom-actions"><button class="action" onclick="startGame()">⚔️<b>БЫСТРЫЙ БОЙ</b><small>20 ходов</small></button><button class="action main" onclick="startGame()"><b>КАМПАНИЯ</b><small>Глава 7-12 • Азрак</small></button><button class="action" onclick="openPanel('ИСПЫТАНИЯ','Испытания откроются на 30 уровне. Здесь будут особые правила и редкие награды.')">👾<b>ИСПЫТАНИЯ</b><small>Скоро</small></button></div>
+        <div class="cards-row"><button class="nav-card" onclick="openPanel('ПЛАНЕТЫ','Карта галактики: сектор исследован на 42%.')"><b>🪐 ПЛАНЕТЫ</b><span>Исследуй миры</span></button><button class="nav-card" onclick="switchScreen('heroes-screen')"><b>👽 ГЕРОИ</b><span>Прокачка отряда</span></button><button class="nav-card" onclick="openPanel('КАРТЫ','Модули, оружие и артефакты усиливают твоих героев.')"><b>🃏 КАРТЫ</b><span>Усиление мощи</span></button><button class="nav-card" onclick="openPanel('АРТЕФАКТЫ','Редкие технологии Пустоты дают уникальные эффекты.')"><b>💠 АРТЕФАКТЫ</b><span>Редкие эффекты</span></button></div>
+      </div>
     </div>
+  </div>
 
-    <!-- НИЖНЯЯ ПАНЕЛЬ НАВИГАЦИИ -->
-    <div class="bottom-navbar">
-        <div class="nav-tab active" onclick="switchScreen('menu-screen')">
-            <span>🏠</span> Главная
-        </div>
-        <div class="nav-tab" onclick="switchScreen('heroes-screen')">
-            <span>👽</span> Герои
-        </div>
-        <div class="nav-tab" onclick="startGame()">
-            <span>⚔️</span> Бой
-        </div>
-        <div class="nav-tab" onclick="openAlert('Инвентарь карт пуст')">
-            <span>🃏</span> Карты
-        </div>
-        <div class="nav-tab" onclick="switchScreen('profile-screen')">
-            <span>🛡️</span> Профиль
-        </div>
+  <div id="heroes-screen" class="screen content-screen">
+    <div class="screen-head"><button class="back" onclick="switchScreen('menu-screen')">‹</button><h2 class="screen-title">ОТРЯД ГЕРОЕВ</h2><div class="spacer"></div></div>
+    <div class="panel"><div class="panel-title">КОМАНДА БОЯ • 4/4</div><div class="panel-sub">Собирай синергию классов и прокачивай любимых героев. Сейчас доступны четыре стартовых бойца.</div></div>
+    <div class="hero-list">
+      <button class="hero-card" onclick="openHero('Зикс','Разведчик','Редкий','25','1000191416.png')"><span class="rarity">🟢 РЕДКИЙ</span><img class="hero-art" src="images/1000191416.png"><div class="hero-info"><div class="hero-name">ЗИКС</div><div class="hero-class">Разведчик • Плазма</div><div class="hero-level">УР. 25 • ⚡ 2 840</div><div class="power"><i></i></div></div></button>
+      <button class="hero-card" onclick="openHero('Оринда','Псионик','Эпический','24','1000191415.png')"><span class="rarity">🔵 ЭПИЧЕСКИЙ</span><img class="hero-art" src="images/1000191415.png"><div class="hero-info"><div class="hero-name">ОРИНДА</div><div class="hero-class">Псионик • Нейроэнергия</div><div class="hero-level">УР. 24 • ⚡ 3 120</div><div class="power"><i style="width:82%"></i></div></div></button>
+      <button class="hero-card" onclick="openHero('Крагг','Титан','Эпический','26','1000191414.png')"><span class="rarity">🔵 ЭПИЧЕСКИЙ</span><img class="hero-art" src="images/1000191414.png"><div class="hero-info"><div class="hero-name">КРАГГ</div><div class="hero-class">Титан • Тяжёлая броня</div><div class="hero-level">УР. 26 • ⚡ 3 440</div><div class="power"><i style="width:88%"></i></div></div></button>
+      <button class="hero-card" onclick="openHero('Люмен','Инженер','Редкий','22','1000191413.png')"><span class="rarity">🟢 РЕДКИЙ</span><img class="hero-art" src="images/1000191413.png"><div class="hero-info"><div class="hero-name">ЛЮМЕН</div><div class="hero-class">Инженер • Нанодроны</div><div class="hero-level">УР. 22 • ⚡ 2 560</div><div class="power"><i style="width:70%"></i></div></div></button>
     </div>
+    <div class="panel" style="margin-top:8px"><div class="panel-title">СИНЕРГИЯ ОТРЯДА</div><div class="panel-sub">🟢 Разведчик + 🟣 Псионик + 🔴 Титан + 🔵 Инженер — сбалансированная команда для сюжетных боссов.</div></div>
+  </div>
 
-    <!-- ЭКРАН БОЯ -->
-    <div id="game-screen" class="screen content-screen">
-        <div class="game-header">
-            <div class="stats-block" style="display:flex; gap:8px;">
-                <div class="stat-badge">Счет: <span id="score-val" style="color: var(--accent-gold);">0</span></div>
-                <div class="stat-badge">Ходы: <span id="moves-val">20</span></div>
-            </div>
-            <button class="btn-back" onclick="switchScreen('menu-screen')">✕</button>
-        </div>
+  <div id="shop-screen" class="screen content-screen"><div class="screen-head"><button class="back" onclick="switchScreen('menu-screen')">‹</button><h2 class="screen-title">МАГАЗИН</h2><div class="spacer"></div></div><div class="panel"><div class="panel-title">🌌 КОСМИЧЕСКИЙ КОНТЕЙНЕР</div><div class="panel-sub">Осколки героев, карты экипировки и шанс на легендарную технологию.</div><button class="primary" onclick="openPanel('КОНТЕЙНЕР ОТКРЫТ','Ты получил: 120 осколков, 1 редкий модуль и 5000 🪙.')">ОТКРЫТЬ ЗА 500 💎</button></div><div class="panel"><div class="panel-title">⚡ ЭНЕРГЕТИЧЕСКИЙ ПАКЕТ</div><div class="panel-sub">Восстановление энергии для новых боёв.</div><button class="primary" onclick="openPanel('ЭНЕРГИЯ ВОССТАНОВЛЕНА','Энергия восстановлена до 120/120.')">ПОЛУЧИТЬ</button></div></div>
 
-        <div class="boss-battle-panel">
-            <div class="boss-info-row">
-                <span>АЗРАК — ПОЖИРАТЕЛЬ ЗВЁЗД</span>
-                <span>HP: <span id="boss-hp-text">100000</span></span>
-            </div>
-            <div class="boss-hp-bar-container"><div class="boss-hp-bar-fill" id="boss-hp-bar"></div></div>
-        </div>
+  <div id="quests-screen" class="screen content-screen"><div class="screen-head"><button class="back" onclick="switchScreen('menu-screen')">‹</button><h2 class="screen-title">ЗАДАНИЯ</h2><div class="spacer"></div></div><div class="panel"><div class="panel-title">⚔️ ПРОЙТИ 3 БОЯ</div><div class="panel-sub">Прогресс: 2/3 • Награда: 300 🪙 + 20 опыта.</div><button class="primary" onclick="openPanel('ЗАДАНИЕ','Награда будет доступна после третьей победы.')">ПРОДОЛЖИТЬ</button></div><div class="panel"><div class="panel-title">💠 ЗАРЯДИТЬ 5 УЛЬТИМЕЙТОВ</div><div class="panel-sub">Прогресс: 3/5 • Награда: редкий модуль.</div></div></div>
 
-        <div id="board-container"></div>
-        
-        <div style="text-align: center; color: #00e5ff; font-size: 0.7rem; margin: 4px 0;" id="battle-tip">
-            Собирай фишки в ряд для зарядки ультимейтов!
-        </div>
+  <div id="profile-screen" class="screen content-screen"><div class="screen-head"><button class="back" onclick="switchScreen('menu-screen')">‹</button><h2 class="screen-title">КОМАНДИР</h2><div class="spacer"></div></div><div class="panel" style="text-align:center"><div class="avatar" style="margin:0 auto 8px;width:64px;height:64px;font-size:1.8rem">👽</div><div class="panel-title">КОМАНДИР</div><div class="panel-sub">Уровень 27 • Рейтинг #42 • VIP 3</div></div><div class="panel"><div class="panel-title">TON КОШЕЛЁК</div><div id="wallet-status-text" class="panel-sub">Кошелек TON не подключен</div><button id="btn-wallet-connect" class="primary">ПОДКЛЮЧИТЬ КОШЕЛЁК</button></div></div>
 
-        <div class="hero-abilities-panel">
-            <div class="hero-slot">
-                <img src="images/blue_trooper.png" id="hero-img-blue" class="hero-img" onclick="useHeroSkill('blue')">
-                <div class="mana-bar"><div class="mana-fill blue" id="mana-blue"></div></div>
-            </div>
-            <div class="hero-slot">
-                <img src="images/green_insectoid.png" id="hero-img-green" class="hero-img" onclick="useHeroSkill('green')">
-                <div class="mana-bar"><div class="mana-fill green" id="mana-green"></div></div>
-            </div>
-            <div class="hero-slot">
-                <img src="images/purple_mystic.png" id="hero-img-purple" class="hero-img" onclick="useHeroSkill('purple')">
-                <div class="mana-bar"><div class="mana-fill purple" id="mana-purple"></div></div>
-            </div>
-            <div class="hero-slot">
-                <img src="images/red_assault.png" id="hero-img-red" class="hero-img" onclick="useHeroSkill('red')">
-                <div class="mana-bar"><div class="mana-fill red" id="mana-red"></div></div>
-            </div>
-        </div>
-    </div>
+  <div id="game-screen" class="screen">
+    <div class="battle-head"><div style="display:flex;gap:5px"><div class="battle-stat">СЧЁТ <b id="score-val">0</b></div><div class="battle-stat">ХОДЫ <b id="moves-val">20</b></div></div><button class="back" onclick="switchScreen('menu-screen')">✕</button></div>
+    <div class="boss-panel"><div class="boss-row"><span>АЗРАК • ПОЖИРАТЕЛЬ ЗВЁЗД</span><span>HP <b id="boss-hp-text">100000</b></span></div><div class="hp"><i id="boss-hp-bar"></i></div></div>
+    <div class="board-wrap"><div id="board-container" class="board"></div></div>
+    <div id="battle-tip" class="tip">Собирай 3+ ядра • заряжай ультимейты</div>
+    <div class="heroes-battle"><button class="battle-hero" id="slot-blue" onclick="useHeroSkill('blue')"><img src="images/1000191413.png" id="hero-img-blue"><div class="mana"><i id="mana-blue" class="mana-blue"></i></div><div class="skill-label">ИНЖЕНЕР</div></button><button class="battle-hero" id="slot-green" onclick="useHeroSkill('green')"><img src="images/1000191416.png" id="hero-img-green"><div class="mana"><i id="mana-green" class="mana-green"></i></div><div class="skill-label">РАЗВЕДЧИК</div></button><button class="battle-hero" id="slot-purple" onclick="useHeroSkill('purple')"><img src="images/1000191415.png" id="hero-img-purple"><div class="mana"><i id="mana-purple" class="mana-purple"></i></div><div class="skill-label">ПСИОНИК</div></button><button class="battle-hero" id="slot-red" onclick="useHeroSkill('red')"><img src="images/1000191414.png" id="hero-img-red"><div class="mana"><i id="mana-red" class="mana-red"></i></div><div class="skill-label">ТИТАН</div></button></div>
+  </div>
 
-    <!-- ДОПОЛНИТЕЛЬНЫЕ ЭКРАНЫ -->
-    <div id="heroes-screen" class="screen content-screen">
-        <div class="game-header"><button class="btn-back" onclick="switchScreen('menu-screen')">✕</button></div>
-        <h2 class="screen-title">ОТРЯД КОСМИЧЕСКИХ ГЕРОЕВ</h2>
-        <div class="generic-card"><h4>Зикс (Разведчик)</h4><p>Статус: Активен • Уровень 25</p></div>
-        <div class="generic-card"><h4>Оринда (Псионик)</h4><p>Статус: Активен • Уровень 24</p></div>
-        <div class="generic-card"><h4>Крагг (Титан)</h4><p>Статус: Активен • Уровень 26</p></div>
-        <div class="generic-card"><h4>Люмен (Инженер)</h4><p>Статус: Активен • Уровень 22</p></div>
-    </div>
+  <nav id="bottom-navbar" class="bottom-navbar"><button class="nav-btn active" data-screen="menu-screen" onclick="switchScreen('menu-screen')"><span class="ico">🏠</span>Главная</button><button class="nav-btn" data-screen="heroes-screen" onclick="switchScreen('heroes-screen')"><span class="ico">👽</span>Герои</button><button class="nav-btn" data-screen="game-screen" onclick="startGame()"><span class="ico">⚔️</span>Бой</button><button class="nav-btn" onclick="openPanel('КАРТЫ','Здесь будет коллекция оружия, модулей и артефактов.')"><span class="ico">🃏</span>Карты</button><button class="nav-btn" data-screen="profile-screen" onclick="switchScreen('profile-screen')"><span class="ico">🛡️</span>Профиль</button></nav>
 
-    <div id="shop-screen" class="screen content-screen">
-        <div class="game-header"><button class="btn-back" onclick="switchScreen('menu-screen')">✕</button></div>
-        <h2 class="screen-title">ГАЛАКТИЧЕСКИЙ МАГАЗИН</h2>
-        <div class="generic-card"><h4>Контейнер героя</h4><p>Шанс выпадения легендарных карт</p><button class="btn-action" onclick="openAlert('Контейнер открыт!')">КУПИТЬ ЗА 500 💎</button></div>
-    </div>
-
-    <div id="quests-screen" class="screen content-screen">
-        <div class="game-header"><button class="btn-back" onclick="switchScreen('menu-screen')">✕</button></div>
-        <h2 class="screen-title">ЕЖЕДНЕВНЫЕ ЗАДАНИЯ</h2>
-        <div class="generic-card"><h4>Пройти 3 битвы с боссом</h4><p>Награда: 300 🪙</p><button class="btn-action" onclick="openAlert('Награда получена!')">ЗАБРАТЬ</button></div>
-    </div>
-
-    <div id="profile-screen" class="screen content-screen">
-        <div class="game-header"><button class="btn-back" onclick="switchScreen('menu-screen')">✕</button></div>
-        <h2 class="screen-title">КАБИНЕТ КОМАНДИРА</h2>
-        <div class="generic-card" style="text-align: center;">
-            <p id="wallet-status-text" style="margin-bottom: 10px; font-size: 0.8rem;">Кошелек TON не подключен</p>
-            <button id="btn-wallet-connect" class="btn-action">ПОДКЛЮЧИТЬ TON КОШЕЛЕК</button>
-        </div>
-    </div>
-
-    <!-- МОДАЛКА ИТОГОВ -->
-    <div id="game-over-modal">
-        <div class="modal-content">
-            <h2 id="modal-title-text" style="color:#ffd700; margin-bottom: 10px;">ПОБЕДА</h2>
-            <p id="modal-desc-text" style="margin-bottom: 15px;">Азрак повержен!</p>
-            <button class="btn-action" onclick="switchScreen('menu-screen'); document.getElementById('game-over-modal').classList.remove('active');">В ГЛАВНОЕ МЕНЮ</button>
-        </div>
-    </div>
-
+  <div id="info-modal" class="modal" onclick="if(event.target===this)closeModal()"><div class="modal-card"><div id="modal-title" class="modal-title">КОСМИЧЕСКАЯ СИСТЕМА</div><div id="modal-text" class="modal-text"></div><button class="primary" onclick="closeModal()">ПОНЯТНО</button></div></div>
+  <div id="hero-modal" class="modal" onclick="if(event.target===this)closeHeroModal()"><div class="modal-card"><img id="hero-modal-img" style="width:100%;aspect-ratio:1.8;object-fit:cover;border-radius:12px;border:1px solid var(--line)"><div id="hero-modal-title" class="modal-title" style="margin-top:10px"></div><div id="hero-modal-text" class="modal-text"></div><button class="primary" onclick="closeHeroModal()">ЗАКРЫТЬ</button></div></div>
+  <div id="game-over-modal" class="modal"><div class="modal-card" style="text-align:center"><div id="game-over-title" class="modal-title">ПОБЕДА</div><div id="game-over-text" class="modal-text"></div><button class="primary" onclick="closeGameOver();switchScreen('menu-screen')">В ГЛАВНОЕ МЕНЮ</button></div></div>
+  <div id="toast" class="toast"></div>
 </div>
-
 <script>
-    document.addEventListener("DOMContentLoaded", () => {
-        let progress = 0;
-        const textPercent = document.getElementById('loading-percentage');
-        const fill = document.getElementById('loading-fill');
-        
-        const interval = setInterval(() => {
-            progress += Math.floor(Math.random() * 8) + 3;
-            if (progress >= 100) {
-                progress = 100; clearInterval(interval);
-                fill.style.width = '100%'; textPercent.innerText = '100'; 
-                setTimeout(() => { document.getElementById('loading-screen').classList.remove('active'); document.getElementById('menu-screen').classList.add('active'); }, 500); 
-            } else { fill.style.width = progress + '%'; textPercent.innerText = progress; }
-        }, 50);
-    });
-
-    function switchScreen(screenId) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.getElementById(screenId).classList.add('active');
-        
-        document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-        if(screenId === 'menu-screen') document.querySelectorAll('.nav-tab')[0].classList.add('active');
-        if(screenId === 'heroes-screen') document.querySelectorAll('.nav-tab')[1].classList.add('active');
-        if(screenId === 'profile-screen') document.querySelectorAll('.nav-tab')[4].classList.add('active');
-    }
-
-    function openAlert(msg) { alert(msg); }
-
-    const BOARD_SIZE = 8;
-    const TILE_TYPES = ['blue', 'yellow', 'purple', 'green', 'red'];
-    const TILE_ICONS = { 'blue': '💎', 'yellow': '🪙', 'purple': '🔮', 'green': '🟢', 'red': '🔥' };
-    const BOSS_MAX_HP = 100000;
-    
-    let board = []; let score = 0; let moves = 20; let bossHp = BOSS_MAX_HP; let selectedTile = null; let isProcessing = false;
-    let heroMana = { blue: 0, green: 0, purple: 0, red: 0 };
-
-    function startGame() {
-        switchScreen('game-screen');
-        score = 0; moves = 20; bossHp = BOSS_MAX_HP; heroMana = { blue: 0, green: 0, purple: 0, red: 0 };
-        document.getElementById('score-val').innerText = score; document.getElementById('moves-val').innerText = moves;
-        updateBossUI(); updateManaUI(); initBoard();
-    }
-
-    function initBoard() {
-        const boardContainer = document.getElementById('board-container');
-        boardContainer.innerHTML = ''; board = [];
-        for (let r = 0; r < BOARD_SIZE; r++) {
-            board[r] = [];
-            for (let c = 0; c < BOARD_SIZE; c++) {
-                let type;
-                do { type = TILE_TYPES[Math.floor(Math.random() * TILE_TYPES.length)]; } 
-                while ((c >= 2 && board[r][c-1].type === type && board[r][c-2].type === type) || (r >= 2 && board[r-1][c].type === type && board[r-2][c].type === type));
-                const tileEl = document.createElement('div'); tileEl.className = `tile tile-${type}`; tileEl.dataset.row = r; tileEl.dataset.col = c; 
-                tileEl.innerHTML = TILE_ICONS[type]; tileEl.addEventListener('click', onTileClick);
-                boardContainer.appendChild(tileEl); board[r][c] = { type: type, element: tileEl };
-            }
-        }
-    }
-
-    function onTileClick(e) {
-        if (isProcessing || moves <= 0 || bossHp <= 0) return;
-        const tileEl = e.currentTarget; const r = parseInt(tileEl.dataset.row); const c = parseInt(tileEl.dataset.col);
-        if (!selectedTile) { selectedTile = { r, c, element: tileEl }; tileEl.classList.add('selected'); } 
-        else {
-            const dist = Math.abs(selectedTile.r - r) + Math.abs(selectedTile.c - c);
-            if (dist === 1) swapTiles(selectedTile.r, selectedTile.c, r, c); 
-            else { selectedTile.element.classList.remove('selected'); selectedTile = { r, c, element: tileEl }; tileEl.classList.add('selected'); }
-        }
-    }
-
-    async function swapTiles(r1, c1, r2, c2) {
-        isProcessing = true; selectedTile.element.classList.remove('selected'); selectedTile = null;
-        const temp = board[r1][c1].type; board[r1][c1].type = board[r2][c2].type; board[r2][c2].type = temp; updateBoardUI();
-        await delay(250);
-        const matches = checkMatches();
-        if (matches.length > 0) { moves--; document.getElementById('moves-val').innerText = moves; await handleMatches(matches); } 
-        else { const temp2 = board[r1][c1].type; board[r1][c1].type = board[r2][c2].type; board[r2][c2].type = temp2; updateBoardUI(); }
-        isProcessing = false;
-    }
-
-    function updateBoardUI() {
-        for (let r = 0; r < BOARD_SIZE; r++) for (let c = 0; c < BOARD_SIZE; c++) {
-            const tile = board[r][c]; if(tile.type) { tile.element.className = `tile tile-${tile.type}`; tile.element.innerHTML = TILE_ICONS[tile.type]; }
-        }
-    }
-
-    function checkMatches() {
-        let matched = []; let isMatched = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(false));
-        for (let r = 0; r < BOARD_SIZE; r++) for (let c = 0; c < BOARD_SIZE - 2; c++) { let type = board[r][c].type; if (type && board[r][c+1].type === type && board[r][c+2].type === type) { isMatched[r][c] = true; isMatched[r][c+1] = true; isMatched[r][c+2] = true; } }
-        for (let c = 0; c < BOARD_SIZE; c++) for (let r = 0; r < BOARD_SIZE - 2; r++) { let type = board[r][c].type; if (type && board[r+1][c].type === type && board[r+2][c].type === type) { isMatched[r][c] = true; isMatched[r+1][c] = true; isMatched[r+2][c] = true; } }
-        for (let r = 0; r < BOARD_SIZE; r++) for (let c = 0; c < BOARD_SIZE; c++) if (isMatched[r][c]) matched.push({r, c});
-        return matched;
-    }
-
-    async function handleMatches(matches) {
-        let matchColors = { blue: 0, green: 0, purple: 0, red: 0 };
-        matches.forEach(pos => { 
-            board[pos.r][pos.c].element.classList.add('match-anim'); 
-            if (board[pos.r][pos.c].type in matchColors) matchColors[board[pos.r][pos.c].type]++;
-        });
-        
-        for (let color in matchColors) {
-            if (matchColors[color] > 0) heroMana[color] = Math.min(100, heroMana[color] + matchColors[color] * 6);
-        }
-        updateManaUI();
-        
-        const damage = matches.length * 50; score += damage; bossHp = Math.max(0, bossHp - damage);
-        document.getElementById('score-val').innerText = score; updateBossUI();
-        await delay(250); 
-
-        matches.forEach(pos => { board[pos.r][pos.c].type = null; board[pos.r][pos.c].element.innerHTML = ''; board[pos.r][pos.c].element.className = 'tile'; });
-
-        for (let c = 0; c < BOARD_SIZE; c++) {
-            for (let r = BOARD_SIZE - 1; r >= 0; r--) {
-                if (board[r][c].type === null) {
-                    for (let lookupRow = r - 1; lookupRow >= 0; lookupRow--) {
-                        if (board[lookupRow][c].type !== null) {
-                            board[r][c].type = board[lookupRow][c].type; board[lookupRow][c].type = null;
-                            board[r][c].element.className = `tile tile-${board[r][c].type} drop-anim`; board[r][c].element.innerHTML = TILE_ICONS[board[r][c].type];
-                            board[lookupRow][c].element.className = 'tile'; board[lookupRow][c].element.innerHTML = ''; break;
-                        }
-                    }
-                }
-            }
-        }
-        await delay(250);
-
-        for (let r = 0; r < BOARD_SIZE; r++) {
-            for (let c = 0; c < BOARD_SIZE; c++) {
-                if (board[r][c].type === null) {
-                    board[r][c].type = TILE_TYPES[Math.floor(Math.random() * TILE_TYPES.length)];
-                    board[r][c].element.className = `tile tile-${board[r][c].type} drop-anim`; board[r][c].element.innerHTML = TILE_ICONS[board[r][c].type];
-                }
-            }
-        }
-        await delay(250);
-        for (let r = 0; r < BOARD_SIZE; r++) for (let c = 0; c < BOARD_SIZE; c++) board[r][c].element.classList.remove('drop-anim');
-
-        const nextMatches = checkMatches();
-        if (nextMatches.length > 0) await handleMatches(nextMatches); 
-        else if (bossHp <= 0) endGame(true); 
-        else if (moves <= 0) endGame(false); 
-        else isProcessing = false;
-    }
-
-    function updateBossUI() {
-        document.getElementById('boss-hp-text').innerText = bossHp;
-        document.getElementById('boss-hp-bar').style.width = `${Math.max(0, (bossHp / BOSS_MAX_HP) * 100)}%`;
-    }
-
-    function updateManaUI() {
-        ['blue', 'green', 'purple', 'red'].forEach(color => {
-            const fill = document.getElementById(`mana-${color}`);
-            const img = document.getElementById(`hero-img-${color}`);
-            if (fill && img) {
-                fill.style.width = `${heroMana[color]}%`;
-                if (heroMana[color] >= 100) img.classList.add('ready'); else img.classList.remove('ready');
-            }
-        });
-    }
-
-    function useHeroSkill(color) {
-        if (heroMana[color] >= 100) {
-            heroMana[color] = 0; updateManaUI();
-            let dmg = (color==='red')?1500:(color==='purple')?1000:(color==='blue')?800:600;
-            bossHp = Math.max(0, bossHp - dmg); score += dmg;
-            document.getElementById('score-val').innerText = score; updateBossUI();
-            
-            let tip = document.getElementById('battle-tip');
-            tip.innerText = `🔥 Навык активирован! Нанесено ${dmg} урона!`;
-            setTimeout(() => { tip.innerText = "Собирай фишки в ряд для зарядки ультимейтов!"; }, 2000);
-
-            if (bossHp <= 0) endGame(true);
-        }
-    }
-
-    function endGame(isWin) {
-        const modal = document.getElementById('game-over-modal');
-        document.getElementById('modal-title-text').innerText = isWin ? "ПОБЕДА НАД АЗРАКОМ!" : "ПОРАЖЕНИЕ";
-        document.getElementById('modal-desc-text').innerHTML = `Вы нанесли урона: <br><span style="color:#00e5ff; font-size: 1.8rem; font-weight:bold;">${score}</span>`;
-        modal.classList.add('active');
-    }
-
-    function delay(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
-
-    // --- TON CONNECT ---
-    let tonConnectUI;
-    try {
-        tonConnectUI = new TON_CONNECT_UI.TonConnectUI({ manifestUrl: window.location.origin + '/tonconnect-manifest.json' });
-        tonConnectUI.onStatusChange(wallet => {
-            const btn = document.getElementById('btn-wallet-connect');
-            const statusText = document.getElementById('wallet-status-text');
-            if (wallet) {
-                const address = wallet.account.address;
-                const shortAddress = `${address.slice(0, 4)}...${address.slice(-4)}`;
-                btn.innerText = "ОТКЛЮЧИТЬ КОШЕЛЕК"; statusText.innerText = `Подключен: ${shortAddress}`;
-                btn.onclick = () => tonConnectUI.disconnect();
-            } else {
-                btn.innerText = "ПОДКЛЮЧИТЬ TON КОШЕЛЕК"; statusText.innerText = "Кошелек не подключен";
-                btn.onclick = connectWallet;
-            }
-        });
-    } catch(e) { console.error("TonConnect error:", e); }
-
-    async function connectWallet() {
-        if (!tonConnectUI) { alert("TonConnect не инициализирован"); return; }
-        try { await tonConnectUI.openModal(); } catch (error) { alert("Ошибка открытия кошелька."); }
-    }
-    
-    document.getElementById('btn-wallet-connect').onclick = connectWallet;
-    
-    const tg = window.Telegram?.WebApp;
-    if (tg) { tg.ready(); tg.expand(); }
+const tg=window.Telegram?.WebApp;if(tg){tg.ready();tg.expand();tg.setHeaderColor?.('#050814');tg.setBackgroundColor?.('#050814')}
+const $=id=>document.getElementById(id);
+function switchScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id)?.classList.add('active');document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.screen===id));$('bottom-navbar').classList.toggle('hidden',id==='loading-screen'||id==='game-screen');if(id!=='game-screen')closeGameOver()}
+function openPanel(title,text){$('modal-title').textContent=title;$('modal-text').textContent=text;$('info-modal').classList.add('active')}
+function closeModal(){$('info-modal').classList.remove('active')}
+function openHero(name,role,rarity,level,img){$('hero-modal-img').src='images/'+img;$('hero-modal-title').textContent=name+' • '+role;$('hero-modal-text').innerHTML='<b>'+rarity+'</b><br>Уровень '+level+' • Уникальная способность активна.<br><br>Прокачивай героя, собирай осколки и усиливай карты экипировки.';$('hero-modal').classList.add('active')}
+function closeHeroModal(){$('hero-modal').classList.remove('active')}
+function closeGameOver(){$('game-over-modal').classList.remove('active')}
+let toastTimer;function toast(text){clearTimeout(toastTimer);$('toast').textContent=text;$('toast').classList.add('show');toastTimer=setTimeout(()=>$('toast').classList.remove('show'),2200)}
+// Loading
+let progress=0;const loadTimer=setInterval(()=>{progress=Math.min(100,progress+Math.floor(Math.random()*9)+4);$('loading-fill').style.width=progress+'%';$('loading-percentage').textContent=progress;if(progress>=100){clearInterval(loadTimer);setTimeout(()=>switchScreen('menu-screen'),380)}},55);
+// Board
+const SIZE=8,TYPES=['blue','yellow','purple','green','red'],ICONS={blue:'💠',yellow:'⚡',purple:'🔮',green:'🟢',red:'🔥'};const MAX_HP=100000;let board=[],score=0,moves=20,bossHp=MAX_HP,selected=null,processing=false;let mana={blue:0,green:0,purple:0,red:0};
+function startGame(){switchScreen('game-screen');score=0;moves=20;bossHp=MAX_HP;mana={blue:0,green:0,purple:0,red:0};$('score-val').textContent=score;$('moves-val').textContent=moves;updateBoss();updateMana();initBoard()}
+function randomType(){return TYPES[Math.floor(Math.random()*TYPES.length)]}
+function initBoard(){const el=$('board-container');el.innerHTML='';board=[];for(let r=0;r<SIZE;r++){board[r]=[];for(let c=0;c<SIZE;c++){let type;do{type=randomType()}while((c>=2&&board[r][c-1].type===type&&board[r][c-2].type===type)||(r>=2&&board[r-1][c].type===type&&board[r-2][c].type===type));const t=document.createElement('button');t.className='tile tile-'+type;t.dataset.r=r;t.dataset.c=c;t.textContent=ICONS[type];t.addEventListener('click',tileClick);el.appendChild(t);board[r][c]={type,el:t}}}}
+function tileClick(e){if(processing||moves<=0||bossHp<=0)return;const t=e.currentTarget,r=+t.dataset.r,c=+t.dataset.c;if(!selected){selected={r,c,el:t};t.classList.add('selected');return}const d=Math.abs(selected.r-r)+Math.abs(selected.c-c);if(d===1)swap(selected.r,selected.c,r,c);else{selected.el.classList.remove('selected');selected={r,c,el:t};t.classList.add('selected')}}
+async function swap(r1,c1,r2,c2){processing=true;selected?.el.classList.remove('selected');selected=null;[board[r1][c1].type,board[r2][c2].type]=[board[r2][c2].type,board[r1][c1].type];renderBoard();await delay(140);let m=findMatches();if(!m.length){[board[r1][c1].type,board[r2][c2].type]=[board[r2][c2].type,board[r1][c1].type];renderBoard();processing=false;return}moves--;$('moves-val').textContent=moves;await resolveMatches(m)}
+function renderBoard(){for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){const x=board[r][c];x.el.className='tile'+(x.type?' tile-'+x.type:'');x.el.textContent=x.type?ICONS[x.type]:''}}
+function findMatches(){const set=new Set();for(let r=0;r<SIZE;r++){for(let c=0;c<SIZE-2;c++){const t=board[r][c].type;if(t&&board[r][c+1].type===t&&board[r][c+2].type===t){for(let k=0;k<3;k++)set.add(r+','+(c+k))}}}for(let c=0;c<SIZE;c++){for(let r=0;r<SIZE-2;r++){const t=board[r][c].type;if(t&&board[r+1][c].type===t&&board[r+2][c].type===t){for(let k=0;k<3;k++)set.add((r+k)+','+c)}}}return [...set].map(s=>{const [r,c]=s.split(',').map(Number);return{r,c}})}
+async function resolveMatches(matches){const counts={blue:0,green:0,purple:0,red:0};matches.forEach(p=>{const x=board[p.r][p.c];if(counts[x.type]!=null)counts[x.type]++;x.type=null});for(const k in counts)mana[k]=Math.min(100,mana[k]+counts[k]*7);const damage=matches.length*70;score+=damage;bossHp=Math.max(0,bossHp-damage);$('score-val').textContent=score;updateBoss();updateMana();renderBoard();await delay(120);dropTiles();renderBoard();await delay(140);const next=findMatches();if(next.length){await resolveMatches(next);return}if(bossHp<=0){endGame(true);return}if(moves<=0){endGame(false);return}processing=false}
+function dropTiles(){for(let c=0;c<SIZE;c++){let write=SIZE-1;for(let r=SIZE-1;r>=0;r--)if(board[r][c].type){board[write][c].type=board[r][c].type;write--}for(let r=write;r>=0;r--)board[r][c].type=randomType()}}
+function updateBoss(){$('boss-hp-text').textContent=bossHp.toLocaleString('ru-RU');$('boss-hp-bar').style.width=(bossHp/MAX_HP*100)+'%'}
+function updateMana(){for(const k of ['blue','green','purple','red']){$('mana-'+k).style.width=mana[k]+'%';$('slot-'+k).classList.toggle('ready',mana[k]>=100)}}
+function useHeroSkill(k){if(mana[k]<100){toast('Ультимейт ещё не заряжен');return}mana[k]=0;const dmg={blue:900,green:1200,purple:1500,red:1800}[k];bossHp=Math.max(0,bossHp-dmg);score+=dmg;$('score-val').textContent=score;updateBoss();updateMana();$('battle-tip').textContent='⚡ УЛЬТИМЕЙТ АКТИВИРОВАН • '+dmg.toLocaleString('ru-RU')+' урона';setTimeout(()=>$('battle-tip').textContent='Собирай 3+ ядра • заряжай ультимейты',1200);if(bossHp<=0)endGame(true)}
+function endGame(win){processing=true;$('game-over-title').textContent=win?'ПОБЕДА НАД АЗРАКОМ!':'СИГНАЛ ПОТЕРЯН';$('game-over-text').innerHTML=(win?'Азрак повержен. Галактический сектор очищен.':'Ходов не осталось. Усиль отряд и попробуй снова.')+'<br><br>Урон: <b style="color:#00e5ff;font-size:1.35rem">'+score.toLocaleString('ru-RU')+'</b>';$('game-over-modal').classList.add('active')}
+function delay(ms){return new Promise(r=>setTimeout(r,ms))}
+// Telegram profile
+if(tg?.initDataUnsafe?.user){const u=tg.initDataUnsafe.user;$('user-name').textContent=((u.first_name||'КОМАНДИР')+' '+(u.last_name||'')).trim().toUpperCase();if(u.photo_url){$('user-avatar').style.backgroundImage=`url(${u.photo_url})`;$('user-avatar').style.backgroundSize='cover';$('user-avatar').textContent=''}}
+// TON Connect
+let tonUI;try{tonUI=new TON_CONNECT_UI.TonConnectUI({manifestUrl:location.origin+'/tonconnect-manifest.json'});tonUI.onStatusChange(wallet=>{const b=$('btn-wallet-connect'),s=$('wallet-status-text');if(wallet){const a=wallet.account.address;s.textContent='Подключен: '+a.slice(0,4)+'…'+a.slice(-4);b.textContent='ОТКЛЮЧИТЬ КОШЕЛЁК';b.onclick=()=>tonUI.disconnect()}else{s.textContent='Кошелек TON не подключен';b.textContent='ПОДКЛЮЧИТЬ КОШЕЛЁК';b.onclick=connectWallet}})}catch(e){console.warn('TON Connect:',e)}
+async function connectWallet(){if(!tonUI){toast('TON Connect пока недоступен');return}try{await tonUI.openModal()}catch(e){toast('Не удалось открыть TON кошелёк')}}$('btn-wallet-connect').onclick=connectWallet;
 </script>
 </body>
 </html>
